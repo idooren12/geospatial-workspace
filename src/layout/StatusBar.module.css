@@ -1,0 +1,47 @@
+.bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 10px;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.coords {
+  display: inline-block;
+  min-width: 25ch;
+  text-align: start;
+}
+
+.divider {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+}
+
+.basemap {
+  border: 0;
+  background: transparent;
+  padding: 0 4px;
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: var(--fs-small);
+}
+
+.basemap:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.error {
+  color: var(--danger);
+}

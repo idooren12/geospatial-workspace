@@ -1,0 +1,30 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--rail-btn);
+  height: var(--rail-btn);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.pressed {
+  color: var(--text);
+  background: var(--bg-2);
+  border-color: var(--border);
+  border-inline-start: 2px solid var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

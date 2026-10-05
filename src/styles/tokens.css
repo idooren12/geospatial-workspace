@@ -1,0 +1,42 @@
+/* Design tokens — the single place to tune the workspace chrome. */
+:root {
+  /* geometry */
+  --topbar-h: 44px;
+  --statusbar-h: 24px;
+  --rail-w: 48px;
+  --rail-btn: 36px;
+  --panel-min-w: 220px;
+  --panel-default-w: 280px;
+  --panel-max-w: 450px;
+  --map-min-w: 500px;
+  --splitter-w: 4px;
+  --panel-header-h: 32px;
+  --row-h: 28px;
+  --radius: 4px;
+
+  /* type */
+  --font-ui: 'IBM Plex Sans Hebrew', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --fs-ui: 13px;
+  --fs-small: 12px;
+
+  /* color — dark neutral chrome; the map is the only bright surface */
+  --bg-0: #121417;
+  --bg-1: #1a1d21;
+  --bg-2: #22262b;
+  --bg-hover: #2a2f35;
+  --border: #2c3137;
+  --text: #d6d9dd;
+  --text-dim: #8a9199;
+  --accent: #3d8bfd;
+  --danger: #e5484d;
+  --focus-ring: 0 0 0 2px var(--accent);
+
+  color-scheme: dark;
+}
+
+:lang(he) {
+  /* Hebrew reads smaller at the same size. */
+  --fs-ui: 14px;
+  --fs-small: 12.5px;
+}

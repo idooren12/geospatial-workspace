@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "Geospatial Workspace",
+    "untitled": "ללא שם",
+    "workspace": "סביבת עבודה"
+  },
+  "rail": {
+    "left": "סרגל כלים ראשי",
+    "right": "סרגל כלים משני"
+  },
+  "topbar": {
+    "switchLanguage": "Switch to English",
+    "languageShort": "EN"
+  },
+  "status": {
+    "cursor": "מיקום הסמן",
+    "zoom": "זום",
+    "basemap": "מפת רקע",
+    "switchBasemap": "החלפת מפת רקע ל{{name}}",
+    "noCursor": "—",
+    "basemapError": "מפת הרקע לא נטענה"
+  },
+  "basemap": {
+    "light": "בהירה",
+    "dark": "כהה"
+  },
+  "map": {
+    "label": "מפה"
+  }
+}

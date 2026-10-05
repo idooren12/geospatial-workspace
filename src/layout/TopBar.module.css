@@ -1,0 +1,50 @@
+.bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 12px 6px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.logo {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 2px solid var(--accent);
+  flex: none;
+}
+
+.name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sep {
+  color: var(--text-dim);
+}
+
+.workspace {
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lang {
+  margin-inline-start: 6px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+}

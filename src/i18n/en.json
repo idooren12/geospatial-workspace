@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "Geospatial Workspace",
+    "untitled": "Untitled",
+    "workspace": "Workspace"
+  },
+  "rail": {
+    "left": "Primary tools",
+    "right": "Secondary tools"
+  },
+  "topbar": {
+    "switchLanguage": "החלפה לעברית",
+    "languageShort": "עב"
+  },
+  "status": {
+    "cursor": "Cursor position",
+    "zoom": "Zoom",
+    "basemap": "Basemap",
+    "switchBasemap": "Switch basemap to {{name}}",
+    "noCursor": "—",
+    "basemapError": "Basemap failed to load"
+  },
+  "basemap": {
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "map": {
+    "label": "Map"
+  }
+}
