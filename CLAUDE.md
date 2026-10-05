@@ -27,7 +27,8 @@ npm run test:e2e     # Playwright at 1366/1920/2560; set PW_CHROMIUM=<path> in s
 | Part | Service | Address |
 | --- | --- | --- |
 | Code | GitHub | https://github.com/idooren12/geospatial-workspace |
-| App | Vercel (static) | see docs/STATUS.md |
+| App | Vercel (static, auto-deploy from `main`) | https://geospatial-workspace.vercel.app |
+| Debug | any build | append `?debug` → `window.__gws.mapService` / `.map` |
 
 ## Hard rules (enforced by `scripts/check-boundaries.mjs`)
 
