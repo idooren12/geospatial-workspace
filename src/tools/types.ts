@@ -15,6 +15,8 @@ export interface ToolDefinition {
   component: ComponentType<ToolPanelProps>;
   /** Position on its rail, ascending. */
   order?: number;
+  /** Show a button on the map-edge rail (default true). Built-ins opened elsewhere set false. */
+  rail?: boolean;
   /** Registered only in development builds. */
   devOnly?: boolean;
 }

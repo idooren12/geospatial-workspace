@@ -13,6 +13,7 @@ toolRegistry.register({
   defaultDock: 'left',
   component: LayersPanel,
   order: 0,
+  rail: false, // opened from the layers button on the map
 });
 
 toolRegistry.register({
@@ -23,6 +24,7 @@ toolRegistry.register({
   defaultDock: 'right',
   component: SettingsPanel,
   order: 90,
+  rail: false, // opened from the top bar
 });
 
 // Development-only helpers (spec §8 allows a small internal debug tool). Absent from production.

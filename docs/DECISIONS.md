@@ -70,3 +70,9 @@ MapTiler Satellite (key, free tier). Switching is a change in `basemaps.config.t
   a dock with nothing to open is not testable. Debug + Sample panels are dev-only (absent in prod).
 - Rails are floating pills centred vertically on the map's side edges, clear of the MapLibre
   control corners. Built-in panels live in `src/panels`, registered in `src/app/builtinTools.tsx`.
+
+## 2026-10-05 — Built-ins off the map edges (owner)
+Settings opens only from the top bar; the Layers panel opens from the layers button in the map
+controls (which replaced the basemap popover). The Layers panel holds the basemap choice and
+"additional layers". `ToolDefinition.rail: false` keeps a tool off the rails; rails are for
+domain tools (and dev-only tools). In production the rails are currently empty and not rendered.

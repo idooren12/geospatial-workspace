@@ -26,28 +26,16 @@
   border-block-start: 1px solid var(--border);
 }
 
-.button:hover,
-.button[aria-expanded='true'] {
+.button:hover {
   background: var(--bg-hover);
 }
 
-/* Basemap picker popover */
-.popover {
-  background: var(--bg-1);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px;
-  z-index: 40;
-  min-width: 180px;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+.button[aria-pressed='true'] {
+  background: var(--bg-2);
+  color: var(--accent);
 }
 
-.popoverTitle {
-  font-size: var(--fs-small);
-  color: var(--text-dim);
-  padding: 2px 4px 6px;
-}
-
+/* Basemap options (Layers panel) */
 .options {
   display: flex;
   flex-direction: column;

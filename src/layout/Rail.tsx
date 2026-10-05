@@ -11,7 +11,7 @@ import styles from './dock.module.css';
  */
 export function Rail({ side }: { side: DockSide }) {
   const { t } = useTranslation();
-  const tools = useTools().filter((tool) => tool.defaultDock === side);
+  const tools = useTools().filter((tool) => tool.defaultDock === side && tool.rail !== false);
   const nameOf = useToolName();
   const dock = useWorkspace((s) => s.dock);
   const toggle = useWorkspace((s) => s.togglePanel);

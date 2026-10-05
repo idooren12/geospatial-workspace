@@ -1,66 +1,40 @@
-import * as Popover from '@radix-ui/react-popover';
 import { Layers, Moon, Sun } from 'lucide-react';
-import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { BasemapManager } from '../../map/BasemapManager';
 import { mapService } from '../../map/MapService';
 import { useWorkspace } from '../../store/workspaceStore';
-import { BasemapOptions } from './BasemapOptions';
+import { isActive } from '../dockPlanner';
 import { MapButton } from './MapButton';
-import { useInwardSide } from './useInwardSide';
+
+/** Panel id of the built-in Layers panel (registered in src/app/builtinTools.tsx). */
+const LAYERS_PANEL = 'layers';
 import styles from './overlay.module.css';
 
-
-/** Basemap picker and light/dark switch, rendered inside the map under the zoom controls. */
+/** Layers button and light/dark switch, rendered inside the map under the zoom controls. */
 export function MapControls() {
   return createPortal(
     <div className={styles.group}>
-      <BasemapPicker />
+      <LayersButton />
       <ThemeToggle />
     </div>,
     mapService.getControlSlot('tools'),
   );
 }
 
-function BasemapPicker() {
+/** Opens the Layers panel (basemap choice + workspace layers). Pressed while the panel shows. */
+function LayersButton() {
   const { t } = useTranslation();
-  const side = useInwardSide();
-  const [open, setOpen] = useState(false);
-  // Returning focus to the trigger after a mouse pick would pop its tooltip; keyboard users keep it.
-  const pickedWithPointer = useRef(false);
+  const showing = useWorkspace((s) => !s.dock.mapOnly && isActive(s.dock, LAYERS_PANEL));
+  const toggle = useWorkspace((s) => s.togglePanel);
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <MapButton
-          label={t('basemap.picker')}
-          icon={<Layers size={16} aria-hidden />}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          data-testid="basemap-picker"
-        />
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          className={styles.popover}
-          side={side}
-          align="start"
-          sideOffset={8}
-          onCloseAutoFocus={(e) => {
-            if (pickedWithPointer.current) e.preventDefault();
-            pickedWithPointer.current = false;
-          }}
-        >
-          <div className={styles.popoverTitle}>{t('basemap.picker')}</div>
-          <BasemapOptions
-            onPick={(e) => {
-              pickedWithPointer.current = e.detail > 0; // detail is 0 for keyboard activation
-              setOpen(false);
-            }}
-          />
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+    <MapButton
+      label={t('tools.layers')}
+      icon={<Layers size={16} aria-hidden />}
+      aria-pressed={showing}
+      onClick={() => toggle(LAYERS_PANEL)}
+      data-testid="layers-button"
+    />
   );
 }
 

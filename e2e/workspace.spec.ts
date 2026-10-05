@@ -57,21 +57,32 @@ test('status readout floats inside the map', async ({ page }) => {
   await expect(page.getByTestId('zoom-level')).toHaveText(/^\d+\.\d$/);
 });
 
-test('basemap picker switches between map and satellite; theme switch only for the map', async ({ page }) => {
+test('the layers button opens the Layers panel, where the basemap is chosen', async ({ page }) => {
   await expect(page.getByTestId('theme-toggle')).toHaveAccessibleName('מעבר למפה כהה');
-  await page.getByTestId('basemap-picker').click();
-  await expect(page.getByTestId('basemap-option-map')).toHaveAttribute('aria-checked', 'true');
-  await page.getByTestId('basemap-option-satellite').click();
-  await expect(page.getByTestId('basemap-option-satellite')).toBeHidden(); // popover closed
+  await page.getByTestId('layers-button').click();
+  await expect(page.getByTestId('panel-layers')).toBeVisible();
+  await expect(page.getByTestId('layers-button')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('layers-basemap-map')).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('layers-basemap-satellite').click();
   await expect(page.getByTestId('theme-toggle')).toHaveCount(0);
   await expect
     .poll(() => gws(page, () => (window as unknown as { __gws: Gws }).__gws.map.getStyle()?.layers[0]?.id))
     .toBe('basemap-imagery');
-  await page.getByTestId('basemap-picker').click();
-  await page.getByTestId('basemap-option-map').click();
+  await page.getByTestId('layers-basemap-map').click();
   await page.getByTestId('theme-toggle').click();
   await expect(page.getByTestId('theme-toggle')).toHaveAccessibleName('מעבר למפה בהירה');
+  await page.getByTestId('layers-button').click();
+  await expect(page.getByTestId('panel-layers')).toHaveCount(0);
   expect(await mapInstances(page)).toBe(1);
+});
+
+test('settings open from the top bar only; no built-in buttons on the map edges', async ({ page }) => {
+  await expect(page.getByTestId('rail-btn-settings')).toHaveCount(0);
+  await expect(page.getByTestId('rail-btn-layers')).toHaveCount(0);
+  await page.getByTestId('topbar-settings').click();
+  await expect(page.getByTestId('panel-settings')).toBeVisible();
+  await page.getByTestId('topbar-settings').click();
+  await expect(page.getByTestId('panel-settings')).toHaveCount(0);
 });
 
 test('switching language mirrors the controls without recreating the map', async ({ page }) => {
@@ -97,8 +108,8 @@ test('first open frames all of Israel', async ({ page }) => {
 test('language, basemap, theme and camera survive a refresh', async ({ page }) => {
   await page.getByRole('button', { name: 'Switch to English' }).click();
   await page.getByTestId('theme-toggle').click();
-  await page.getByTestId('basemap-picker').click();
-  await page.getByTestId('basemap-option-satellite').click();
+  await page.getByTestId('layers-button').click();
+  await page.getByTestId('layers-basemap-satellite').click();
   const map = await box(page, 'main');
   await page.mouse.move(map.x + map.width / 2, map.y + map.height / 2);
   await page.mouse.wheel(0, -600);
@@ -108,11 +119,8 @@ test('language, basemap, theme and camera survive a refresh', async ({ page }) =
   await page.reload();
   await page.locator('.maplibregl-canvas').waitFor();
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
-  await page.getByTestId('basemap-picker').click();
-  await expect(page.getByTestId('basemap-option-satellite')).toHaveAttribute('aria-checked', 'true');
-  await page.keyboard.press('Escape');
-  await page.getByTestId('basemap-picker').click();
-  await page.getByTestId('basemap-option-map').click();
+  await expect(page.getByTestId('layers-basemap-satellite')).toHaveAttribute('aria-checked', 'true'); // panel restored too
+  await page.getByTestId('layers-basemap-map').click();
   await expect(page.getByTestId('theme-toggle')).toHaveAccessibleName('Switch to light map'); // dark kept
   await expect(page.getByTestId('zoom-level')).toHaveText(before!);
 });

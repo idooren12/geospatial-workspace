@@ -45,7 +45,7 @@ interface BasemapBase {
   id: string;
   /** i18n key for the display name. */
   nameKey: string;
-  /** lucide icon name used by the basemap picker. */
+  /** lucide icon name used in the basemap list. */
   icon: 'map' | 'satellite' | 'mountain' | 'waves';
 }
 

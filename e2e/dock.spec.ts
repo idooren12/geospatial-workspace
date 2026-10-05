@@ -9,6 +9,10 @@ const boxOf = async (l: Locator): Promise<Box> => {
 const overlaps = (a: Box, b: Box) =>
   a.x < b.x + b.width - 0.5 && b.x < a.x + a.width - 0.5 && a.y < b.y + b.height - 0.5 && b.y < a.y + a.height - 0.5;
 
+/** Built-ins open from the map's layers button / the top bar; dev tools from the rails. */
+const openerOf = (page: Page, id: string) =>
+  page.getByTestId(id === 'layers' ? 'layers-button' : id === 'settings' ? 'topbar-settings' : `rail-btn-${id}`);
+
 const mapInstances = (page: Page) =>
   page.evaluate(() => (window as unknown as { __gws: { mapService: { instanceCount: number } } }).__gws.mapService.instanceCount);
 
@@ -44,7 +48,7 @@ for (const lang of ['he', 'en'] as const) {
 
     test('a panel takes width from the map and gives it all back when closed (DCK-01, DCK-05)', async ({ page }) => {
       const full = (await boxOf(page.getByTestId('map-cell'))).width;
-      await page.getByTestId('rail-btn-layers').click();
+      await openerOf(page, 'layers').click();
       await expect(page.getByTestId('panel-layers')).toBeVisible();
       const withPanel = (await boxOf(page.getByTestId('map-cell'))).width;
       expect(full - withPanel).toBeCloseTo(280 + 4, 0);
@@ -56,7 +60,7 @@ for (const lang of ['he', 'en'] as const) {
     });
 
     test('the Layers panel docks on the reading-start side', async ({ page }) => {
-      await page.getByTestId('rail-btn-layers').click();
+      await openerOf(page, 'layers').click();
       const col = await boxOf(page.getByTestId('dock-column'));
       const vp = page.viewportSize()!;
       if (lang === 'he') expect(col.x + col.width).toBeCloseTo(vp.width, 0);
@@ -64,7 +68,7 @@ for (const lang of ['he', 'en'] as const) {
     });
 
     test('both sides open at once, several panels per side, never overlapping (DCK-02..04)', async ({ page }) => {
-      for (const id of ['layers', 'sample', 'settings', 'debug']) await page.getByTestId(`rail-btn-${id}`).click();
+      for (const id of ['layers', 'sample', 'settings', 'debug']) await openerOf(page, id).click();
       await assertLayout(page);
       const vp = page.viewportSize()!;
       const columns = page.getByTestId('dock-column');
@@ -75,19 +79,19 @@ for (const lang of ['he', 'en'] as const) {
 
     test('a rail click on a hidden tab shows it; a second click closes it', async ({ page }) => {
       await page.setViewportSize({ width: 1000, height: 700 });
-      await page.getByTestId('rail-btn-settings').click();
+      await openerOf(page, 'settings').click();
       await page.getByTestId('rail-btn-debug').click();
       await expect(page.getByRole('tab')).toHaveCount(2);
       await expect(page.getByTestId('panel-settings')).toBeHidden();
-      await page.getByTestId('rail-btn-settings').click();
+      await openerOf(page, 'settings').click();
       await expect(page.getByTestId('panel-settings')).toBeVisible();
-      await page.getByTestId('rail-btn-settings').click();
+      await openerOf(page, 'settings').click();
       await expect(page.getByTestId('panel-settings')).toHaveCount(0);
       await expect(page.getByTestId('panel-debug')).toBeVisible();
     });
 
     test('splitter resizes within limits and the map follows (spec §5.3)', async ({ page }) => {
-      await page.getByTestId('rail-btn-layers').click();
+      await openerOf(page, 'layers').click();
       const splitter = page.getByTestId('splitter');
       const s = await boxOf(splitter);
       const towardMap = (lang === 'he') === true ? -1 : 1; // start side: map is inline-end
@@ -113,7 +117,7 @@ for (const lang of ['he', 'en'] as const) {
     });
 
     test('Map Only hides every panel and restores the same layout (spec §5.5)', async ({ page }) => {
-      for (const id of ['layers', 'settings']) await page.getByTestId(`rail-btn-${id}`).click();
+      for (const id of ['layers', 'settings']) await openerOf(page, id).click();
       const before = await page.getByTestId('dock-column').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
       await page.getByTestId('map-only').click();
       await expect(page.getByTestId('dock-column').first()).toBeHidden();
@@ -129,7 +133,7 @@ for (const lang of ['he', 'en'] as const) {
     });
 
     test('tab menu moves a panel to the other side', async ({ page }) => {
-      await page.getByTestId('rail-btn-layers').click();
+      await openerOf(page, 'layers').click();
       const before = await boxOf(page.getByTestId('dock-column'));
       await page.getByTestId('panel-menu').click();
       await page.getByTestId('menu-move').click();
@@ -139,8 +143,8 @@ for (const lang of ['he', 'en'] as const) {
     });
 
     test('dock layout survives a refresh (spec §12)', async ({ page }) => {
-      await page.getByTestId('rail-btn-layers').click();
-      await page.getByTestId('rail-btn-settings').click();
+      await openerOf(page, 'layers').click();
+      await openerOf(page, 'settings').click();
       const splitter = page.getByTestId('splitter').first();
       await splitter.focus();
       await page.keyboard.press('End');
@@ -154,7 +158,7 @@ for (const lang of ['he', 'en'] as const) {
 
     test('shrinking the window keeps the map usable by tabbing panels', async ({ page }) => {
       await page.setViewportSize({ width: 1920, height: 900 });
-      for (const id of ['layers', 'sample', 'settings', 'debug']) await page.getByTestId(`rail-btn-${id}`).click();
+      for (const id of ['layers', 'sample', 'settings', 'debug']) await openerOf(page, id).click();
       await expect(page.getByTestId('dock-column')).toHaveCount(4);
       await page.setViewportSize({ width: 1100, height: 800 });
       await expect.poll(() => page.getByTestId('dock-column').count()).toBeLessThan(4);

@@ -5,13 +5,14 @@ Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-worksp
 ## Works now (M0, M1, M2 + part of M3)
 - One MapLibre instance; Map (light/dark) and Satellite basemaps; Hebrew RTL default, English.
 - Full-bleed map under a fixed top bar (Map Only, Settings, language). Floating map controls:
-  zoom/compass, basemap picker, light/dark switch; floating coordinates + zoom readout.
-- Dock: floating rails on both map edges open panels as columns beside the map (never over it).
+  zoom/compass, layers button (opens the Layers panel), light/dark switch; floating readout.
+- Dock: panels open as columns beside the map (never over it). Floating rails on the map edges
+  list domain tools (none in prod yet; dev shows Debug/Sample).
   Several columns per side, tab groups when space runs out, tab menu (move side / split), splitters
   (mouse + keyboard, 220–450 px, map ≥ 500 px), Map Only, layout persisted and reflowed on resize.
 - Tool Registry + ToolContext. Panels: Layers (basemap section; layer list empty until M3),
   Settings (language, units, coordinate format, two-step reset). Dev-only: Debug, Sample.
-- Tests: 51 unit (planner incl. randomized invariants), 78 E2E (he/en × 1366/1920/2560).
+- Tests: 51 unit (planner incl. randomized invariants), E2E (81, he/en × 1366/1920/2560).
 - `?debug` exposes `window.__gws` on any build.
 
 ## Next step
