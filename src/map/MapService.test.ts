@@ -28,6 +28,9 @@ class FakeMap {
     this.handlers.get(t)?.forEach((fn) => fn(e));
   }
   addControl() {}
+  hasControl() {
+    return false;
+  }
   removeControl() {}
   remove() {}
   resize = vi.fn();
@@ -79,7 +82,7 @@ class FakeMap {
 }
 
 const opts: MountOptions = {
-  styleUrl: 'https://example.test/light',
+  style: 'https://example.test/light',
   view: null,
   fallbackBounds: [
     [34, 29],

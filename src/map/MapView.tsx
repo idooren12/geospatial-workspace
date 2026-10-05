@@ -19,16 +19,20 @@ export function MapView() {
     const el = ref.current;
     if (!el) return;
     const s = useWorkspace.getState();
-    mapService.mount(el, {
-      styleUrl: BasemapManager.resolve(s.basemapId).styleUrl,
-      view: s.view,
-      fallbackBounds: INITIAL_BOUNDS,
-      fallbackPadding: INITIAL_BOUNDS_PADDING,
-      labelLanguage: s.settings.language,
-      scaleUnit: s.settings.units,
-      controlCorner: dirOf(s.settings.language) === 'rtl' ? 'top-left' : 'top-right',
-    });
-    // No cleanup: the map lives for the whole page (MAP-01). StrictMode re-runs are no-ops.
+    // Imagery styles are assembled asynchronously; mount is idempotent, so a StrictMode
+    // double-run resolving twice still creates one map.
+    void BasemapManager.styleFor(s.basemapId, s.mapTheme).then((style) =>
+      mapService.mount(el, {
+        style,
+        view: s.view,
+        fallbackBounds: INITIAL_BOUNDS,
+        fallbackPadding: INITIAL_BOUNDS_PADDING,
+        labelLanguage: s.settings.language,
+        scaleUnit: s.settings.units,
+        controlCorner: dirOf(s.settings.language) === 'rtl' ? 'top-left' : 'top-right',
+      }),
+    );
+    // No cleanup: the map lives for the whole page (MAP-01).
   }, []);
 
   return <div ref={ref} className={styles.map} role="region" aria-label={t('map.label')} />;

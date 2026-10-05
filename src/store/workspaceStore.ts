@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { DEFAULT_BASEMAP_ID } from '../map/basemaps.config';
-import type { MapViewState } from '../map/types';
+import type { MapTheme, MapViewState } from '../map/types';
 import {
   loadWorkspace,
   saveWorkspace,
@@ -13,9 +13,11 @@ import {
 export interface WorkspaceState {
   view: MapViewState | null;
   basemapId: string;
+  mapTheme: MapTheme;
   settings: Settings;
   setView: (view: MapViewState) => void;
   setBasemap: (id: string) => void;
+  setMapTheme: (theme: MapTheme) => void;
   updateSettings: (patch: Partial<Settings>) => void;
 }
 
@@ -24,9 +26,11 @@ export function createWorkspaceStore(initial: PersistedWorkspace) {
     subscribeWithSelector((set) => ({
       view: initial.view,
       basemapId: initial.basemapId,
+      mapTheme: initial.mapTheme,
       settings: initial.settings,
       setView: (view) => set({ view }),
       setBasemap: (basemapId) => set({ basemapId }),
+      setMapTheme: (mapTheme) => set({ mapTheme }),
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
     })),
   );
@@ -35,7 +39,7 @@ export function createWorkspaceStore(initial: PersistedWorkspace) {
 export const useWorkspace = createWorkspaceStore(loadWorkspace(DEFAULT_BASEMAP_ID));
 
 export function toPersisted(s: WorkspaceState): PersistedWorkspace {
-  return { version: SCHEMA_VERSION, view: s.view, basemapId: s.basemapId, settings: s.settings };
+  return { version: SCHEMA_VERSION, view: s.view, basemapId: s.basemapId, mapTheme: s.mapTheme, settings: s.settings };
 }
 
 /**
@@ -54,7 +58,7 @@ export function startPersistence(
     write(toPersisted(store.getState()));
   };
   const unsub = store.subscribe(
-    (s) => [s.view, s.basemapId, s.settings] as const,
+    (s) => [s.view, s.basemapId, s.mapTheme, s.settings] as const,
     () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(flush, delayMs);

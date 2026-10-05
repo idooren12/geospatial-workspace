@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { applyDocumentLanguage, dirOf } from '../i18n';
 import i18n from '../i18n';
-import { WorkspaceLayout } from '../layout/WorkspaceLayout';
-import { StatusBar } from '../layout/StatusBar';
+import { MapControls } from '../layout/overlay/MapControls';
+import { MapStatus } from '../layout/overlay/MapStatus';
 import { TopBar } from '../layout/TopBar';
+import { WorkspaceLayout } from '../layout/WorkspaceLayout';
 import { BasemapManager } from '../map/BasemapManager';
 import { mapService } from '../map/MapService';
 import { MapView } from '../map/MapView';
@@ -26,11 +26,17 @@ function useWorkspaceWiring() {
 
   // Store → map / document. Subscriptions fire on change only, never on mount.
   useEffect(() => {
+    let request = 0;
+    const applyBasemap = () => {
+      const { basemapId, mapTheme } = useWorkspace.getState();
+      const mine = ++request;
+      void BasemapManager.styleFor(basemapId, mapTheme).then((style) => {
+        if (mine === request) mapService.setStyle(style); // ignore stale, slower requests
+      });
+    };
     const offs = [
-      useWorkspace.subscribe(
-        (s) => s.basemapId,
-        (id) => mapService.setStyle(BasemapManager.resolve(id).styleUrl),
-      ),
+      useWorkspace.subscribe((s) => s.basemapId, applyBasemap),
+      useWorkspace.subscribe((s) => s.mapTheme, applyBasemap),
       useWorkspace.subscribe(
         (s) => s.settings.language,
         (lang) => {
@@ -51,18 +57,11 @@ function useWorkspaceWiring() {
 
 export function Workspace() {
   useWorkspaceWiring();
-  const { t } = useTranslation();
-
-  // Rails are filled from the Tool Registry in M3.
   return (
-    <WorkspaceLayout
-      topBar={<TopBar />}
-      leftRailLabel={t('rail.left')}
-      rightRailLabel={t('rail.right')}
-      leftRail={null}
-      rightRail={null}
-      map={<MapView />}
-      statusBar={<StatusBar />}
-    />
+    <>
+      <WorkspaceLayout topBar={<TopBar />} map={<MapView />} />
+      <MapControls />
+      <MapStatus />
+    </>
   );
 }

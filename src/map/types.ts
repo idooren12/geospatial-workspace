@@ -4,9 +4,17 @@ import type {
   LayerSpecification,
   LngLatBoundsLike,
   SourceSpecification,
+  StyleSpecification,
 } from 'maplibre-gl';
 
-export type { FitBoundsOptions, FlyToOptions, LayerSpecification, LngLatBoundsLike, SourceSpecification };
+export type {
+  FitBoundsOptions,
+  FlyToOptions,
+  LayerSpecification,
+  LngLatBoundsLike,
+  SourceSpecification,
+  StyleSpecification,
+};
 
 /** Camera state persisted between sessions (MAP-04). */
 export interface MapViewState {
@@ -18,16 +26,40 @@ export interface MapViewState {
 
 export type ScaleUnit = 'metric' | 'nautical' | 'imperial';
 export type LabelLanguage = 'he' | 'en';
+export type MapTheme = 'light' | 'dark';
 
-/** Placement of map controls; mirrored for RTL so they stay away from the main dock. */
+/** Placement of the main map controls; mirrored for RTL. */
 export type ControlCorner = 'top-left' | 'top-right';
 
-export interface BasemapDefinition {
+/** A style URL, or a full style built at runtime (e.g. imagery + vector labels). */
+export type StyleInput = string | StyleSpecification;
+
+export interface RasterImagery {
+  tiles: string[];
+  tileSize: number;
+  maxzoom: number;
+  attribution: string;
+}
+
+interface BasemapBase {
   id: string;
   /** i18n key for the display name. */
   nameKey: string;
-  styleUrl: string;
-  kind: 'vector' | 'raster';
-  /** Whether the basemap itself is dark (lets UI pick contrasting overlays). */
-  dark?: boolean;
+  /** lucide icon name used by the basemap picker. */
+  icon: 'map' | 'satellite' | 'mountain' | 'waves';
 }
+
+/** A vector basemap with a light and a dark rendering. */
+export interface VectorBasemap extends BasemapBase {
+  kind: 'vector';
+  styles: Record<MapTheme, string>;
+}
+
+/** Imagery underneath, optionally with place names taken from a vector style on top. */
+export interface RasterBasemap extends BasemapBase {
+  kind: 'raster';
+  imagery: RasterImagery;
+  labelsStyleUrl?: string;
+}
+
+export type BasemapDefinition = VectorBasemap | RasterBasemap;

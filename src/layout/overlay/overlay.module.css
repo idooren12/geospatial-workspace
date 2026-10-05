@@ -1,0 +1,144 @@
+/* Floating map UI. Matches the MapLibre control look so everything on the map reads as one set. */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.button {
+  width: 29px;
+  height: 29px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.button + .button {
+  border-block-start: 1px solid var(--border);
+}
+
+.button:hover,
+.button[aria-expanded='true'] {
+  background: var(--bg-hover);
+}
+
+/* Basemap picker popover */
+.popover {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  z-index: 40;
+  min-width: 180px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+}
+
+.popoverTitle {
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+  padding: 2px 4px 6px;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--bg-hover);
+}
+
+.option[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--bg-2);
+}
+
+.swatch {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: #1a1d21;
+}
+
+.swatch_map {
+  background: linear-gradient(135deg, #f2f3f0 0 55%, #c2c8ca 55% 100%);
+}
+
+.swatch_satellite {
+  background: linear-gradient(135deg, #4a5d3a 0 40%, #8a7a5a 40% 70%, #2e4a63 70% 100%);
+  color: #fff;
+}
+
+.swatch_mountain {
+  background: linear-gradient(160deg, #d9d2c3, #9b8f7a);
+}
+
+.swatch_waves {
+  background: linear-gradient(160deg, #a9c7dd, #3d6f95);
+  color: #fff;
+}
+
+.optionName {
+  flex: 1;
+}
+
+.check {
+  color: var(--accent);
+}
+
+/* Status readout */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: var(--radius);
+  background: rgb(18 20 23 / 0.78);
+  backdrop-filter: blur(4px);
+  color: var(--text);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.coords {
+  display: inline-block;
+  min-width: 25ch;
+  text-align: start;
+}
+
+.divider {
+  width: 1px;
+  height: 12px;
+  background: rgb(255 255 255 / 0.2);
+}
+
+.error {
+  color: #ff8a8d;
+}

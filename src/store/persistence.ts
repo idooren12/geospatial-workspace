@@ -1,4 +1,4 @@
-import type { MapViewState, ScaleUnit } from '../map/types';
+import type { MapTheme, MapViewState, ScaleUnit } from '../map/types';
 
 export const STORAGE_KEY = 'gws:workspace:v1';
 export const SCHEMA_VERSION = 1;
@@ -16,6 +16,7 @@ export interface PersistedWorkspace {
   version: typeof SCHEMA_VERSION;
   view: MapViewState | null;
   basemapId: string;
+  mapTheme: MapTheme;
   settings: Settings;
 }
 
@@ -59,6 +60,7 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     version: SCHEMA_VERSION,
     view: null,
     basemapId: defaultBasemapId,
+    mapTheme: 'light',
     settings: { ...DEFAULT_SETTINGS },
   };
   if (!raw) return empty;
@@ -75,6 +77,7 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     version: SCHEMA_VERSION,
     view: parseView(o.view),
     basemapId: typeof o.basemapId === 'string' ? o.basemapId : defaultBasemapId,
+    mapTheme: pick(o.mapTheme, ['light', 'dark'] as const, 'light'),
     settings: {
       language: pick(s.language, ['he', 'en'] as const, DEFAULT_SETTINGS.language),
       units: pick(s.units, ['metric', 'nautical', 'imperial'] as const, DEFAULT_SETTINGS.units),
@@ -83,8 +86,12 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
   };
 }
 
-/** Upgrades older schema versions. Version 1 is the first; future versions add steps here. */
+/** Upgrades older stored shapes. Future schema versions add steps here. */
 function migrate(data: Record<string, unknown>): Record<string, unknown> {
+  // Before the satellite basemap, light and dark were two separate basemap ids.
+  if (data.basemapId === 'light' || data.basemapId === 'dark') {
+    return { ...data, mapTheme: data.basemapId, basemapId: 'map' };
+  }
   return data;
 }
 

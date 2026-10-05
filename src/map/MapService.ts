@@ -1,8 +1,8 @@
-import { Map as MaplibreMap, NavigationControl, ScaleControl, setWorkerUrl } from 'maplibre-gl';
+import { AttributionControl, Map as MaplibreMap, NavigationControl, ScaleControl, setWorkerUrl } from 'maplibre-gl';
 // MapLibre 6 resolves its worker relative to its own module, which bundlers relocate.
 // Let Vite bundle the worker (with its shared chunk) and hand MapLibre the final URL.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import type { Map as MlMap, MapEventType, MapOptions } from 'maplibre-gl';
+import type { ControlPosition, IControl, Map as MlMap, MapEventType, MapOptions } from 'maplibre-gl';
 import { isNameLabel, labelExpression } from './labelLanguage';
 import { WS_PREFIX } from './mapConfig';
 import type {
@@ -15,14 +15,21 @@ import type {
   MapViewState,
   ScaleUnit,
   SourceSpecification,
+  StyleInput,
 } from './types';
 
 setWorkerUrl(workerUrl);
 
 export type MapFactory = (options: MapOptions) => MlMap;
 
+/**
+ * Named places on the map where the app can render its own floating UI (via React portals).
+ * `tools` sits under the navigation control; `status` sits in the opposite bottom corner.
+ */
+export type ControlSlot = 'tools' | 'status';
+
 export interface MountOptions {
-  styleUrl: string;
+  style: StyleInput;
   /** Saved camera; when absent the map fits `fallbackBounds`. */
   view?: MapViewState | null;
   fallbackBounds: LngLatBoundsLike;
@@ -70,7 +77,11 @@ export class MapService {
   private controlCorner: ControlCorner = 'top-right';
   private nav: NavigationControl | null = null;
   private scale: ScaleControl | null = null;
+  private attribution: AttributionControl | null = null;
+  private readonly slots = new Map<ControlSlot, { el: HTMLElement; control: IControl }>();
   private resizeObserver: ResizeObserver | null = null;
+  private resolveMounted!: () => void;
+  private readonly mounted = new Promise<void>((r) => (this.resolveMounted = r));
   private resizeFrame = 0;
 
   /** Number of MapLibre instances ever created. Must stay 1 for the life of the page. */
@@ -96,8 +107,8 @@ export class MapService {
     const v = opts.view;
     const map = this.factory({
       container: el,
-      style: opts.styleUrl,
-      attributionControl: { compact: true },
+      style: opts.style,
+      attributionControl: false,
       ...(v
         ? { center: v.center, zoom: v.zoom, bearing: v.bearing, pitch: v.pitch }
         : { bounds: opts.fallbackBounds, fitBoundsOptions: { padding: opts.fallbackPadding ?? 0 } }),
@@ -107,8 +118,8 @@ export class MapService {
 
     this.nav = new NavigationControl({ visualizePitch: true });
     this.scale = new ScaleControl({ unit: opts.scaleUnit, maxWidth: 120 });
-    map.addControl(this.nav, this.controlCorner);
-    map.addControl(this.scale, this.controlCorner === 'top-right' ? 'bottom-left' : 'bottom-right');
+    this.attribution = new AttributionControl({ compact: true });
+    this.placeControls();
 
     map.on('style.load', this.handleStyleLoad);
     for (const s of this.subscriptions) map.on(s.type, s.fn as never);
@@ -117,6 +128,12 @@ export class MapService {
       this.resizeObserver = new ResizeObserver(() => this.scheduleResize());
       this.resizeObserver.observe(el);
     }
+    this.resolveMounted();
+  }
+
+  /** Resolves once the map exists (mount can wait for an asynchronously built style). */
+  whenMounted(): Promise<void> {
+    return this.mounted;
   }
 
   /** For tests and hot reload only; the app never destroys its map. */
@@ -174,10 +191,10 @@ export class MapService {
 
   // ------------------------------------------------------------------ basemap
 
-  setStyle(styleUrl: string): void {
+  setStyle(style: StyleInput): void {
     if (!this.map) return;
     this.styleReady = false;
-    this.map.setStyle(styleUrl, { diff: false });
+    this.map.setStyle(style, { diff: false });
   }
 
   // ---------------------------------------------------- sources & layers (generic)
@@ -298,17 +315,51 @@ export class MapService {
 
   /** Mirrors control placement for RTL, keeping controls clear of the primary dock side. */
   setControlCorner(corner: ControlCorner): void {
-    const map = this.map;
-    if (!map || corner === this.controlCorner) return;
+    if (corner === this.controlCorner) return;
     this.controlCorner = corner;
-    if (this.nav) {
-      map.removeControl(this.nav);
-      map.addControl(this.nav, corner);
+    this.placeControls();
+  }
+
+  /**
+   * A DOM element living inside a MapLibre control corner, for app UI rendered with a portal.
+   * Exists before mount, so components can portal into it at any time.
+   */
+  getControlSlot(name: ControlSlot): HTMLElement {
+    let slot = this.slots.get(name);
+    if (!slot) {
+      const el = document.createElement('div');
+      el.className = `maplibregl-ctrl gws-slot gws-slot-${name}`;
+      slot = { el, control: { onAdd: () => el, onRemove: () => el.remove() } };
+      this.slots.set(name, slot);
     }
-    if (this.scale) {
-      map.removeControl(this.scale);
-      map.addControl(this.scale, corner === 'top-right' ? 'bottom-left' : 'bottom-right');
-    }
+    return slot.el;
+  }
+
+  /**
+   * (Re)places every control. Top corner: navigation, then app tools below it.
+   * Bottom corners stack upwards in add order: the status slot sits lowest, the scale above it;
+   * attribution goes to the bottom corner on the navigation side.
+   */
+  private placeControls(): void {
+    const map = this.map;
+    if (!map) return;
+    const top: ControlPosition = this.controlCorner;
+    const sameBottom: ControlPosition = top === 'top-right' ? 'bottom-right' : 'bottom-left';
+    const otherBottom: ControlPosition = top === 'top-right' ? 'bottom-left' : 'bottom-right';
+    const tools = this.slotControl('tools');
+    const status = this.slotControl('status');
+    const all = [this.nav, tools, status, this.scale, this.attribution];
+    for (const c of all) if (c && map.hasControl(c)) map.removeControl(c);
+    if (this.nav) map.addControl(this.nav, top);
+    map.addControl(tools, top);
+    map.addControl(status, otherBottom);
+    if (this.scale) map.addControl(this.scale, otherBottom);
+    if (this.attribution) map.addControl(this.attribution, sameBottom);
+  }
+
+  private slotControl(name: ControlSlot): IControl {
+    this.getControlSlot(name);
+    return this.slots.get(name)!.control;
   }
 }
 
