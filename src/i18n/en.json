@@ -49,7 +49,26 @@
     "light": "Light",
     "dark": "Dark",
     "layers": "Additional layers",
-    "empty": "No layers"
+    "empty": "No layers",
+    "show": "Show {{name}}",
+    "hide": "Hide {{name}}",
+    "rename": "Rename",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove layer",
+    "opacity": "Opacity",
+    "details": "Details for {{name}}",
+    "typeLabel": "Type",
+    "group": "Group",
+    "owner": "Created by",
+    "drag": "Drag {{name}} to reorder",
+    "menu": "Options for {{name}}",
+    "nameInput": "Layer name",
+    "type_geojson": "GeoJSON",
+    "type_vector": "Vector",
+    "type_raster": "Raster",
+    "type_custom": "Custom",
+    "topHint": "The top layer draws above the others."
   },
   "settings": {
     "language": "Language",
@@ -68,7 +87,9 @@
     "mapInstances": "Map instances",
     "bodyWidth": "Workspace width",
     "mapWidth": "Map width",
-    "note": "Development-only panel; not on the live site."
+    "note": "Development-only panel; not on the live site.",
+    "addTestLayer": "Add test layer",
+    "removeTestLayers": "Remove test layers"
   },
   "sample": {
     "body": "Dummy panel for testing columns and tabs. Development builds only."

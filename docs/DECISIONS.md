@@ -76,3 +76,22 @@ Settings opens only from the top bar; the Layers panel opens from the layers but
 controls (which replaced the basemap popover). The Layers panel holds the basemap choice and
 "additional layers". `ToolDefinition.rail: false` keeps a tool off the rails; rails are for
 domain tools (and dev-only tools). In production the rails are currently empty and not rendered.
+
+## 2026-10-05 — M3 layers: store is the truth, LayerManager diffs
+- `WorkspaceLayer` (spec §7) gains `mapLayers` (MapLibre styles without id/source; empty → type
+  defaults), `ownerToolId` and `persist: 'local' | 'session' | 'none'`.
+- `src/layers/LayerManager.ts` diffs store → MapService: add/remove, visibility, opacity, z-order;
+  GeoJSON data changes go through `setGeoJSONData` (no layer churn). Structural changes re-create.
+  A bad style from a tool is caught and recorded; the rest keeps drawing.
+- Workspace opacity multiplies each style's own opacity (a 25 % fill at 50 % → 12.5 %), via a
+  generic `MapService.setPaintProperty`.
+- Local layers are saved inside the workspace key; session layers in `gws:session-layers:v1`.
+- `ToolContext.layers` tags `ownerToolId`; a tool may remove its own non-removable layers; closing
+  a tool keeps its layers (spec §8).
+- Reorder: drag (dnd-kit, keyboard sensor: Space + arrows) plus Move up/down in the row menu.
+- Inspector tool moved to M5 (not in the DoD).
+
+## 2026-10-06 — Layer adds are idempotent; one LayerManager per page
+React StrictMode re-ran the wiring effect and a second LayerManager re-added restored layers, so
+MapService recorded duplicates. Now `MapService.addLayer` with an existing id replaces it, and the
+LayerManager is a module-level singleton like the map.

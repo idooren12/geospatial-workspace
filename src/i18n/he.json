@@ -49,7 +49,26 @@
     "light": "בהיר",
     "dark": "כהה",
     "layers": "שכבות נוספות",
-    "empty": "אין שכבות"
+    "empty": "אין שכבות",
+    "show": "הצגת {{name}}",
+    "hide": "הסתרת {{name}}",
+    "rename": "שינוי שם",
+    "moveUp": "הזזה למעלה",
+    "moveDown": "הזזה למטה",
+    "remove": "הסרת השכבה",
+    "opacity": "אטימות",
+    "details": "פרטים על {{name}}",
+    "typeLabel": "סוג",
+    "group": "קבוצה",
+    "owner": "נוצרה על ידי",
+    "drag": "גרירת {{name}} לשינוי הסדר",
+    "menu": "אפשרויות עבור {{name}}",
+    "nameInput": "שם השכבה",
+    "type_geojson": "GeoJSON",
+    "type_vector": "וקטורית",
+    "type_raster": "רסטר",
+    "type_custom": "מותאמת",
+    "topHint": "השכבה העליונה מצוירת מעל השאר."
   },
   "settings": {
     "language": "שפה",
@@ -68,7 +87,9 @@
     "mapInstances": "מופעי מפה",
     "bodyWidth": "רוחב אזור העבודה",
     "mapWidth": "רוחב המפה",
-    "note": "פאנל פיתוח בלבד; לא מופיע באתר החי."
+    "note": "פאנל פיתוח בלבד; לא מופיע באתר החי.",
+    "addTestLayer": "הוספת שכבת בדיקה",
+    "removeTestLayers": "הסרת שכבות הבדיקה"
   },
   "sample": {
     "body": "פאנל דמה לבדיקת עמודות ולשוניות. מופיע רק בסביבת פיתוח."

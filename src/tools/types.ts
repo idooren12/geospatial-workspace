@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { FitBoundsOptions, FlyToOptions, LngLatBoundsLike, MapViewState } from '../map/types';
+import type { NewWorkspaceLayer, WorkspaceLayer } from '../layers/layerTypes';
 
 /**
  * A tool is a plug-in module: a panel component plus how it docks. The workspace discovers tools
@@ -25,16 +26,26 @@ export interface ToolPanelProps {
   ctx: ToolContext;
 }
 
-/**
- * Everything a tool may touch. Deliberately small: no raw map, no store internals (MAP-03).
- * Layer operations join in M3 together with the LayerManager.
- */
+/** Everything a tool may touch. Deliberately small: no raw map, no store internals (MAP-03). */
 export interface ToolContext {
   toolId: string;
   map: {
     flyTo(options: FlyToOptions): void;
     fitBounds(bounds: LngLatBoundsLike, options?: FitBoundsOptions): void;
     getView(): MapViewState | null;
+  };
+  /**
+   * Standard workspace layers (spec §7). Layers a tool adds are tagged with its id and stay when
+   * the tool's panel closes (spec §8) unless the tool removes them.
+   */
+  layers: {
+    /** Adds on top of the layer stack; returns the layer id. */
+    add(layer: NewWorkspaceLayer): string;
+    update(id: string, patch: Partial<Omit<WorkspaceLayer, 'id'>>): void;
+    /** Removes a layer, including non-removable ones this tool created. */
+    remove(id: string): void;
+    /** Layers this tool created, bottom → top. */
+    own(): WorkspaceLayer[];
   };
   dock: {
     close(): void;

@@ -5,8 +5,12 @@ import type { MapTheme, MapViewState } from '../map/types';
 import * as dock from '../layout/dockPlanner';
 import type { DockSide, DockState } from '../layout/dockPlanner';
 import { toolRegistry } from '../tools/ToolRegistry';
+import type { NewWorkspaceLayer, WorkspaceLayer } from '../layers/layerTypes';
 import {
   DEFAULT_SETTINGS,
+  loadSessionLayers,
+  saveSessionLayers,
+  type StoredLayers,
   loadWorkspace,
   saveWorkspace,
   SCHEMA_VERSION,
@@ -40,11 +44,29 @@ export interface WorkspaceState {
   /** Drops panels whose tools are not registered (stale storage). */
   pruneDock: (known: ReadonlySet<string>) => void;
   resetWorkspace: () => void;
+
+  // Workspace layers (spec §7). Synced to the map by the LayerManager.
+  layers: Record<string, WorkspaceLayer>;
+  /** Bottom → top. */
+  layerOrder: string[];
+  /** Adds on top; returns the id. */
+  addLayer: (layer: NewWorkspaceLayer) => string;
+  updateLayer: (id: string, patch: Partial<Omit<WorkspaceLayer, 'id'>>) => void;
+  /** Respects `removable` unless forced (a tool removing its own layer). */
+  removeLayer: (id: string, opts?: { force?: boolean }) => void;
+  setLayerVisible: (id: string, visible: boolean) => void;
+  setLayerOpacity: (id: string, opacity: number) => void;
+  renameLayer: (id: string, name: string) => void;
+  /** Moves a layer to an index of `layerOrder` (0 = bottom). */
+  moveLayer: (id: string, toIndex: number) => void;
 }
+
+let layerSeq = 0;
+const newLayerId = () => `L${Date.now().toString(36)}${(layerSeq++).toString(36)}`;
 
 const sideOf = (panelId: string): DockSide => toolRegistry.get(panelId)?.defaultDock ?? 'left';
 
-export function createWorkspaceStore(initial: PersistedWorkspace) {
+export function createWorkspaceStore(initial: PersistedWorkspace, session: StoredLayers = { items: {}, order: [] }) {
   return create<WorkspaceState>()(
     subscribeWithSelector((set, get) => ({
       view: initial.view,
@@ -79,12 +101,64 @@ export function createWorkspaceStore(initial: PersistedWorkspace) {
           mapTheme: 'light',
           settings: { ...DEFAULT_SETTINGS },
           dock: dock.emptyDock(),
+          layers: {},
+          layerOrder: [],
+        }),
+
+      layers: { ...initial.layers.items, ...session.items },
+      layerOrder: [...initial.layers.order, ...session.order.filter((id) => !(id in initial.layers.items))],
+      addLayer: (input) => {
+        const id = input.id && !get().layers[input.id] ? input.id : newLayerId();
+        const layer: WorkspaceLayer = {
+          visible: true,
+          opacity: 1,
+          removable: true,
+          mapLayers: [],
+          persist: 'local',
+          ...input,
+          id,
+          name: input.name.trim() || id,
+        };
+        set((s) => ({ layers: { ...s.layers, [id]: layer }, layerOrder: [...s.layerOrder, id] }));
+        return id;
+      },
+      updateLayer: (id, patch) =>
+        set((s) => {
+          const cur = s.layers[id];
+          return cur ? { layers: { ...s.layers, [id]: { ...cur, ...patch, id } } } : {};
+        }),
+      removeLayer: (id, opts) =>
+        set((s) => {
+          const cur = s.layers[id];
+          if (!cur || (!cur.removable && !opts?.force)) return {};
+          const { [id]: _gone, ...rest } = s.layers;
+          return { layers: rest, layerOrder: s.layerOrder.filter((x) => x !== id) };
+        }),
+      setLayerVisible: (id, visible) => get().updateLayer(id, { visible }),
+      setLayerOpacity: (id, opacity) => get().updateLayer(id, { opacity: Math.min(1, Math.max(0, opacity)) }),
+      renameLayer: (id, name) => {
+        const n = name.trim();
+        if (n) get().updateLayer(id, { name: n });
+      },
+      moveLayer: (id, toIndex) =>
+        set((s) => {
+          const from = s.layerOrder.indexOf(id);
+          if (from < 0) return {};
+          const order = s.layerOrder.filter((x) => x !== id);
+          order.splice(Math.max(0, Math.min(order.length, toIndex)), 0, id);
+          return { layerOrder: order };
         }),
     })),
   );
 }
 
-export const useWorkspace = createWorkspaceStore(loadWorkspace(DEFAULT_BASEMAP_ID));
+export const useWorkspace = createWorkspaceStore(loadWorkspace(DEFAULT_BASEMAP_ID), loadSessionLayers());
+
+/** Splits layers by where they are kept. */
+function layersBy(s: WorkspaceState, persist: WorkspaceLayer['persist']): StoredLayers {
+  const order = s.layerOrder.filter((id) => s.layers[id]?.persist === persist);
+  return { items: Object.fromEntries(order.map((id) => [id, s.layers[id]!])), order };
+}
 
 export function toPersisted(s: WorkspaceState): PersistedWorkspace {
   return {
@@ -94,6 +168,7 @@ export function toPersisted(s: WorkspaceState): PersistedWorkspace {
     mapTheme: s.mapTheme,
     settings: s.settings,
     dock: s.dock,
+    layers: layersBy(s, 'local'),
   };
 }
 
@@ -105,15 +180,17 @@ export function startPersistence(
   store: typeof useWorkspace = useWorkspace,
   write: (ws: PersistedWorkspace) => void = saveWorkspace,
   delayMs = 300,
+  writeSession: (layers: StoredLayers) => void = saveSessionLayers,
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const flush = () => {
     if (timer) clearTimeout(timer);
     timer = null;
     write(toPersisted(store.getState()));
+    writeSession(layersBy(store.getState(), 'session'));
   };
   const unsub = store.subscribe(
-    (s) => [s.view, s.basemapId, s.mapTheme, s.settings, s.dock] as const,
+    (s) => [s.view, s.basemapId, s.mapTheme, s.settings, s.dock, s.layers, s.layerOrder] as const,
     () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(flush, delayMs);

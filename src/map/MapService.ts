@@ -2,9 +2,11 @@ import { AttributionControl, Map as MaplibreMap, NavigationControl, ScaleControl
 // MapLibre 6 resolves its worker relative to its own module, which bundlers relocate.
 // Let Vite bundle the worker (with its shared chunk) and hand MapLibre the final URL.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import type { GeoJSON } from 'geojson';
 import type { ControlPosition, IControl, Map as MlMap, MapEventType, MapOptions } from 'maplibre-gl';
 import { isNameLabel, labelExpression } from './labelLanguage';
 import { WS_PREFIX } from './mapConfig';
+import { OPACITY_PROPS } from './opacity';
 import type {
   ControlCorner,
   FitBoundsOptions,
@@ -46,18 +48,6 @@ interface Subscription {
   type: keyof MapEventType;
   fn: AnyListener;
 }
-
-/** Paint properties that carry opacity, per MapLibre layer type. */
-const OPACITY_PROPS: Partial<Record<LayerSpecification['type'], string[]>> = {
-  fill: ['fill-opacity'],
-  line: ['line-opacity'],
-  circle: ['circle-opacity', 'circle-stroke-opacity'],
-  symbol: ['icon-opacity', 'text-opacity'],
-  raster: ['raster-opacity'],
-  'fill-extrusion': ['fill-extrusion-opacity'],
-  heatmap: ['heatmap-opacity'],
-  background: ['background-opacity'],
-};
 
 /**
  * The single owner of the MapLibre instance (MAP-01, MAP-03).
@@ -208,7 +198,22 @@ export class MapService {
   addSource(id: string, spec: SourceSpecification): void {
     assertWsId(id);
     this.sources.set(id, spec);
-    if (this.styleReady && this.map && !this.map.getSource(id)) this.map.addSource(id, spec);
+    if (!this.styleReady || !this.map) return;
+    if (!this.map.getSource(id)) this.map.addSource(id, spec);
+    else if (spec.type === 'geojson' && 'data' in spec) {
+      // Same id again: keep the source (layers depend on it) and refresh its data.
+      const src = this.map.getSource(id) as { setData?: (d: unknown) => void };
+      src.setData?.(spec.data);
+    }
+  }
+
+  /** Replaces the data of a GeoJSON source in place (no layer churn); kept for basemap restores. */
+  setGeoJSONData(id: string, data: GeoJSON): void {
+    const spec = this.sources.get(id);
+    if (!spec || spec.type !== 'geojson') throw new Error(`Not a workspace GeoJSON source: ${id}`);
+    this.sources.set(id, { ...spec, data });
+    const src = this.styleReady ? this.map?.getSource(id) : undefined;
+    if (src && 'setData' in src) (src as { setData(d: GeoJSON): void }).setData(data);
   }
 
   removeSource(id: string): void {
@@ -216,8 +221,10 @@ export class MapService {
     if (this.styleReady && this.map?.getSource(id)) this.map.removeSource(id);
   }
 
+  /** Adding an id that already exists replaces it (idempotent), never duplicates it. */
   addLayer(spec: LayerSpecification, beforeId?: string): void {
     assertWsId(spec.id);
+    if (this.layers.some((l) => l.id === spec.id)) this.removeLayer(spec.id);
     const copy = structuredClone(spec);
     const at = beforeId ? this.layers.findIndex((l) => l.id === beforeId) : -1;
     if (at >= 0) this.layers.splice(at, 0, copy);
@@ -247,6 +254,15 @@ export class MapService {
       if (this.styleReady && this.map?.getLayer(id)) (this.map.setPaintProperty as (l: string, k: string, v: unknown) => void).call(this.map, id, p, o);
     }
     (spec as { paint?: object }).paint = paint;
+  }
+
+  /** Sets one paint property of a managed layer (recorded, so it survives basemap switches). */
+  setPaintProperty(id: string, prop: string, value: unknown): void {
+    const spec = this.findLayer(id) as { paint?: Record<string, unknown> };
+    spec.paint = { ...spec.paint, [prop]: value };
+    if (this.styleReady && this.map?.getLayer(id)) {
+      (this.map.setPaintProperty as (l: string, k: string, v: unknown) => void).call(this.map, id, prop, value);
+    }
   }
 
   /** Moves a managed layer below `beforeId`, or to the top when omitted. */

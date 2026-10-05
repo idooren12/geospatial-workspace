@@ -17,6 +17,18 @@ export function toolContext(toolId: string): ToolContext {
       fitBounds: (b, o) => mapService.fitBounds(b, o),
       getView: () => mapService.getView(),
     },
+    layers: {
+      add: (layer) => useWorkspace.getState().addLayer({ ...layer, ownerToolId: toolId }),
+      update: (id, patch) => useWorkspace.getState().updateLayer(id, patch),
+      remove: (id) => {
+        const s = useWorkspace.getState();
+        s.removeLayer(id, { force: s.layers[id]?.ownerToolId === toolId });
+      },
+      own: () => {
+        const s = useWorkspace.getState();
+        return s.layerOrder.map((id) => s.layers[id]!).filter((l) => l.ownerToolId === toolId);
+      },
+    },
     dock: {
       close: () => useWorkspace.getState().closePanel(toolId),
       focus: () => useWorkspace.getState().openPanel(toolId),

@@ -14,6 +14,7 @@ describe('parseWorkspace', () => {
         mapTheme: 'light',
         settings: DEFAULT_SETTINGS,
         dock: emptyDock(),
+        layers: { items: {}, order: [] },
       });
     }
   });
@@ -77,5 +78,71 @@ describe('startPersistence', () => {
     expect(write.mock.calls[0]![0].basemapId).toBe('satellite');
     stop();
     vi.useRealTimers();
+  });
+});
+
+describe('layers in the store', () => {
+  const geo = { type: 'geojson' as const, data: { type: 'FeatureCollection', features: [] } };
+
+  it('adds on top, renames, hides, clamps opacity, reorders and removes', () => {
+    const store = createWorkspaceStore(parseWorkspace(null, 'map'));
+    const s = () => store.getState();
+    const a = s().addLayer({ name: 'A', type: 'geojson', source: geo });
+    const b = s().addLayer({ name: ' B ', type: 'geojson', source: geo });
+    expect(s().layerOrder).toEqual([a, b]);
+    expect(s().layers[b]!.name).toBe('B');
+    s().renameLayer(a, '   '); // blank names are ignored
+    expect(s().layers[a]!.name).toBe('A');
+    s().setLayerVisible(a, false);
+    s().setLayerOpacity(a, 7);
+    expect(s().layers[a]).toMatchObject({ visible: false, opacity: 1 });
+    s().moveLayer(a, 1);
+    expect(s().layerOrder).toEqual([b, a]);
+    s().removeLayer(b);
+    expect(s().layerOrder).toEqual([a]);
+  });
+
+  it('keeps non-removable layers unless a tool forces it', () => {
+    const store = createWorkspaceStore(parseWorkspace(null, 'map'));
+    const id = store.getState().addLayer({ name: 'Locked', type: 'custom', removable: false });
+    store.getState().removeLayer(id);
+    expect(store.getState().layers[id]).toBeDefined();
+    store.getState().removeLayer(id, { force: true });
+    expect(store.getState().layers[id]).toBeUndefined();
+  });
+
+  it('saves local layers with the workspace and session layers separately', () => {
+    vi.useFakeTimers();
+    const store = createWorkspaceStore(parseWorkspace(null, 'map'));
+    const write = vi.fn();
+    const writeSession = vi.fn();
+    const stop = startPersistence(store, write, 300, writeSession);
+    const keep = store.getState().addLayer({ name: 'Keep', type: 'geojson', source: geo });
+    const tab = store.getState().addLayer({ name: 'Sketch', type: 'geojson', source: geo, persist: 'session' });
+    store.getState().addLayer({ name: 'Temp', type: 'geojson', source: geo, persist: 'none' });
+    vi.advanceTimersByTime(300);
+    expect(write.mock.calls[0]![0].layers.order).toEqual([keep]);
+    expect(writeSession.mock.calls[0]![0].order).toEqual([tab]);
+    stop();
+    vi.useRealTimers();
+  });
+
+  it('restores stored layers, dropping malformed ones and keeping the order', () => {
+    const ws = parseWorkspace(
+      JSON.stringify({
+        layers: {
+          items: {
+            x: { name: 'X', type: 'raster', opacity: 2, source: { type: 'raster', tiles: ['t'] } },
+            y: { name: 'Y', type: 'nonsense' },
+            z: { name: 'Z', type: 'geojson', visible: false },
+          },
+          order: ['z', 'x', 'y'],
+        },
+      }),
+      'map',
+    );
+    expect(ws.layers.order).toEqual(['z', 'x']);
+    expect(ws.layers.items.x!.opacity).toBe(1);
+    expect(ws.layers.items.z!.visible).toBe(false);
   });
 });

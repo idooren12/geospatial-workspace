@@ -161,6 +161,17 @@ describe('MapService', () => {
     expect(a0.paint?.['fill-color']).toBe('#f00');
   });
 
+  it('treats adding an existing layer id as a replace, never a duplicate', () => {
+    const { svc, fake } = setup();
+    fake().fire('style.load');
+    svc.addSource('ws:a', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    svc.addLayer(fillLayer);
+    svc.addLayer({ ...fillLayer, paint: { 'fill-color': '#0f0' } });
+    expect(svc.getLayerOrder()).toEqual(['ws:a:0']);
+    expect(fake().layers).toHaveLength(1);
+    expect(fake().layers[0]!.paint?.['fill-color']).toBe('#0f0');
+  });
+
   it('rejects ids without the workspace prefix', () => {
     const { svc } = setup();
     expect(() => svc.addLayer({ ...fillLayer, id: 'mine' })).toThrow(/ws:/);

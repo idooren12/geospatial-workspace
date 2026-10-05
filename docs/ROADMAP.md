@@ -1,31 +1,31 @@
 # Roadmap — Stage 0
 
-Order follows the implementation spec. M2 and M3 can run in parallel after M1.
+Order follows the implementation spec.
 
-## M3 — Layers + Tools  ← next
-- [ ] LayerManager (store → MapService diff) + layer list in the Layers panel (show/hide, opacity,
-      rename, reorder by drag and keyboard, remove) — spec §7.1
-- [ ] `ToolContext.layers` API for tools (creates `ws:` layers, tags ownerToolId)
-- [ ] Debug panel: add/remove a test layer (dev only) to exercise the LayerManager
-- [ ] Inspector tool (click a feature → its properties)
-- [ ] Decide satellite provider/key (open decision)
-
-## M4 — Utilities
-- [ ] terra-draw DrawController; Sketch layer in sessionStorage
-- [ ] Distance and area measurement with unit setting
-- [ ] Re-init drawing after basemap switch
+## M4 — Utilities  ← next
+- [ ] terra-draw DrawController (point / line / polygon / select); Sketch layer, persist: 'session'
+- [ ] Distance and area measurement with the unit setting (m/km, NM, ft/mi)
+- [ ] Re-init drawing after basemap switch; Escape cancels the current sketch
+- [ ] Measure & Draw panel (on the rail)
 
 ## M5 — Hardening
+- [ ] Inspector tool (click a feature → its properties)
+- [ ] Optional: sync open tabs via the `storage` event
 - [ ] Accessibility pass (keyboard, aria, focus), performance checks
 - [ ] Full DoD checklist (21 items) at 1366/1920/2560, both languages
+- [ ] Decide satellite provider/key (open decision)
 - [ ] Architecture review gate before Stage 1
 
 ## Done
 - [x] M0 — Scaffold: Vite + React + TS strict, oxlint, architecture guard, Vitest, Playwright, CI
 - [x] M1 — Map Core: MapService, MapView, BasemapManager (Light/Dark), Hebrew/English labels,
       view persistence, Israel first view, language switch
-- [x] Satellite basemap, basemap picker, light/dark switch, full-bleed map with floating readout
+- [x] Satellite basemap, light/dark switch, full-bleed map with floating readout
 - [x] M2 — Dock: planner, columns, splitters, tabs, tab menu (move side / split), Map Only
       (button, Ctrl+Shift+M, Esc), persistence + reflow on resize, E2E DCK-01..05 in he/en
-- [x] From M3: Tool Registry + ToolContext, floating rails, Layers panel (basemap section,
-      empty layers), Settings panel (language, units, coordinates, reset), dev Debug/Sample
+- [x] Tool Registry + ToolContext, floating rails (domain tools only), Layers panel opened from the
+      map's layers button, Settings panel from the top bar, dev Debug/Sample
+- [x] M3 — Layers: WorkspaceLayer model, store slice (local / session / none persistence),
+      LayerManager diff-sync to MapService (opacity multiplies style opacity, in-place GeoJSON
+      updates, z-order), `ToolContext.layers`, layer list (show/hide, opacity, rename by double
+      click / F2 / menu, reorder by drag, keyboard and menu, remove), dev test-layer buttons

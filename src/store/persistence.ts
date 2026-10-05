@@ -1,5 +1,6 @@
 import type { MapTheme, MapViewState, ScaleUnit } from '../map/types';
 import { emptyDock, sanitizeDock, type DockState } from '../layout/dockPlanner';
+import { LAYER_TYPES, type WorkspaceLayer } from '../layers/layerTypes';
 
 export const STORAGE_KEY = 'gws:workspace:v1';
 export const SCHEMA_VERSION = 1;
@@ -20,7 +21,18 @@ export interface PersistedWorkspace {
   mapTheme: MapTheme;
   settings: Settings;
   dock: DockState;
+  /** Only layers with persist: 'local'. Session layers live in sessionStorage. */
+  layers: StoredLayers;
 }
+
+export interface StoredLayers {
+  items: Record<string, WorkspaceLayer>;
+  /** Bottom → top. */
+  order: string[];
+}
+
+export const SESSION_LAYERS_KEY = 'gws:session-layers:v1';
+const emptyLayers = (): StoredLayers => ({ items: {}, order: [] });
 
 /** Storage can throw (private mode, full quota, blocked site data); never let it break the app. */
 export function safeStorage(kind: 'local' | 'session' = 'local'): Storage | null {
@@ -65,6 +77,7 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     mapTheme: 'light',
     settings: { ...DEFAULT_SETTINGS },
     dock: emptyDock(),
+    layers: emptyLayers(),
   };
   if (!raw) return empty;
   let data: unknown;
@@ -88,7 +101,63 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     },
     // Structure only here; unknown tool ids are pruned once tools are registered.
     dock: sanitizeDock(o.dock, null),
+    layers: parseLayers(o.layers),
   };
+}
+
+/** Validates stored layers one by one; a malformed layer is dropped, the rest survive. */
+export function parseLayers(raw: unknown): StoredLayers {
+  const out = emptyLayers();
+  if (!raw || typeof raw !== 'object') return out;
+  const o = raw as { items?: unknown; order?: unknown };
+  const items = (o.items && typeof o.items === 'object' ? o.items : {}) as Record<string, unknown>;
+  for (const [id, v] of Object.entries(items)) {
+    const layer = parseLayer(id, v);
+    if (layer) out.items[id] = layer;
+  }
+  const order = Array.isArray(o.order) ? o.order.filter((id): id is string => typeof id === 'string' && id in out.items) : [];
+  // Layers missing from the order go on top, so nothing is silently lost.
+  out.order = [...new Set(order), ...Object.keys(out.items).filter((id) => !order.includes(id))];
+  return out;
+}
+
+function parseLayer(id: string, v: unknown): WorkspaceLayer | null {
+  if (!v || typeof v !== 'object') return null;
+  const l = v as Record<string, unknown>;
+  if (typeof l.name !== 'string' || !LAYER_TYPES.includes(l.type as never)) return null;
+  return {
+    id,
+    name: l.name,
+    type: l.type as WorkspaceLayer['type'],
+    visible: l.visible !== false,
+    opacity: isNum(l.opacity) ? Math.min(1, Math.max(0, l.opacity)) : 1,
+    group: typeof l.group === 'string' ? l.group : undefined,
+    removable: l.removable !== false,
+    source: l.source,
+    mapLayers: Array.isArray(l.mapLayers) ? (l.mapLayers as WorkspaceLayer['mapLayers']) : [],
+    ownerToolId: typeof l.ownerToolId === 'string' ? l.ownerToolId : undefined,
+    persist: pick(l.persist, ['local', 'session', 'none'] as const, 'local'),
+  };
+}
+
+export function loadSessionLayers(): StoredLayers {
+  try {
+    const raw = safeStorage('session')?.getItem(SESSION_LAYERS_KEY);
+    return raw ? parseLayers(JSON.parse(raw)) : emptyLayers();
+  } catch {
+    return emptyLayers();
+  }
+}
+
+export function saveSessionLayers(layers: StoredLayers): void {
+  try {
+    const s = safeStorage('session');
+    if (!s) return;
+    if (layers.order.length === 0) s.removeItem(SESSION_LAYERS_KEY);
+    else s.setItem(SESSION_LAYERS_KEY, JSON.stringify(layers));
+  } catch {
+    /* quota */
+  }
 }
 
 /** Upgrades older stored shapes. Future schema versions add steps here. */
@@ -120,6 +189,7 @@ export function saveWorkspace(ws: PersistedWorkspace): void {
 
 export function clearWorkspace(): void {
   try {
+    safeStorage('session')?.removeItem(SESSION_LAYERS_KEY);
     safeStorage('local')?.removeItem(STORAGE_KEY);
   } catch {
     /* ignore */
