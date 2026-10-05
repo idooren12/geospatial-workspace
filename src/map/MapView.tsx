@@ -24,6 +24,7 @@ export function MapView() {
     void BasemapManager.styleFor(s.basemapId, s.mapTheme).then((style) =>
       mapService.mount(el, {
         style,
+        labelPaint: BasemapManager.labelPaintFor(s.basemapId, s.mapTheme),
         view: s.view,
         fallbackBounds: INITIAL_BOUNDS,
         fallbackPadding: INITIAL_BOUNDS_PADDING,

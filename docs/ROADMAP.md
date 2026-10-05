@@ -11,8 +11,9 @@ Order follows the implementation spec. M2 and M3 can run in parallel after M1.
 - [ ] E2E for DCK-01..05 in Hebrew and English
 
 ## M3 — Layers + Tools
-- [ ] ToolRegistry + ToolContext; rails built from the registry
-- [ ] LayerManager (store → MapService diff) and Layers panel with basemap list
+- [ ] ToolRegistry + ToolContext; floating rails over the map edge, built from the registry
+- [ ] LayerManager (store → MapService diff) and Layers panel
+- [ ] Decide satellite provider/key (open decision)
 - [ ] Settings tool (language, units, coordinate format, reset workspace)
 - [ ] Inspector tool; Debug tool (dev only: test layer, open N panels)
 
@@ -29,4 +30,5 @@ Order follows the implementation spec. M2 and M3 can run in parallel after M1.
 ## Done
 - [x] M0 — Scaffold: Vite + React + TS strict, oxlint, architecture guard, Vitest, Playwright, CI
 - [x] M1 — Map Core: MapService, MapView, BasemapManager (Light/Dark), Hebrew/English labels,
-      view persistence, Israel first view, status bar (coords, zoom, basemap), language switch
+      view persistence, Israel first view, language switch
+- [x] Satellite basemap, basemap picker, light/dark switch, full-bleed map with floating readout

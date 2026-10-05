@@ -53,7 +53,11 @@ interface BasemapBase {
 export interface VectorBasemap extends BasemapBase {
   kind: 'vector';
   styles: Record<MapTheme, string>;
+  /** Paint overrides for place-name labels, per theme (e.g. brighter text on a dim dark style). */
+  labelPaint?: Partial<Record<MapTheme, LabelPaint>>;
 }
+
+export type LabelPaint = Record<'text-color' | 'text-halo-color' | 'text-halo-width', string | number>;
 
 /** Imagery underneath, optionally with place names taken from a vector style on top. */
 export interface RasterBasemap extends BasemapBase {

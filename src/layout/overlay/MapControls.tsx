@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Check, Layers, Map as MapIcon, Moon, Mountain, Satellite, Sun, Waves } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { BasemapManager } from '../../map/BasemapManager';
@@ -33,6 +33,8 @@ function BasemapPicker() {
   const { t } = useTranslation();
   const side = useInwardSide();
   const [open, setOpen] = useState(false);
+  // Returning focus to the trigger after a mouse pick would pop its tooltip; keyboard users keep it.
+  const pickedWithPointer = useRef(false);
   const basemapId = useWorkspace((s) => s.basemapId);
   const setBasemap = useWorkspace((s) => s.setBasemap);
   const current = BasemapManager.resolve(basemapId);
@@ -49,7 +51,16 @@ function BasemapPicker() {
         />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.popover} side={side} align="start" sideOffset={8}>
+        <Popover.Content
+          className={styles.popover}
+          side={side}
+          align="start"
+          sideOffset={8}
+          onCloseAutoFocus={(e) => {
+            if (pickedWithPointer.current) e.preventDefault();
+            pickedWithPointer.current = false;
+          }}
+        >
           <div className={styles.popoverTitle}>{t('basemap.picker')}</div>
           <div role="radiogroup" aria-label={t('basemap.picker')} className={styles.options}>
             {BasemapManager.list().map((b) => {
@@ -63,7 +74,8 @@ function BasemapPicker() {
                   aria-checked={selected}
                   className={styles.option}
                   data-testid={`basemap-option-${b.id}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    pickedWithPointer.current = e.detail > 0; // detail is 0 for keyboard activation
                     setBasemap(b.id);
                     setOpen(false);
                   }}

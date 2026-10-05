@@ -1,5 +1,5 @@
 import { BASEMAPS, DEFAULT_BASEMAP_ID } from './basemaps.config';
-import type { BasemapDefinition, LayerSpecification, MapTheme, RasterBasemap, StyleInput, StyleSpecification } from './types';
+import type { BasemapDefinition, LabelPaint, LayerSpecification, MapTheme, RasterBasemap, StyleInput, StyleSpecification } from './types';
 
 type FetchJson = (url: string) => Promise<unknown>;
 
@@ -36,6 +36,12 @@ export const BasemapManager = {
   /** Whether the light/dark switch applies to this basemap. */
   hasThemes(def: BasemapDefinition): boolean {
     return def.kind === 'vector';
+  },
+
+  /** Label paint overrides to apply on top of the style, if the basemap defines any. */
+  labelPaintFor(id: string, theme: MapTheme): LabelPaint | null {
+    const def = BasemapManager.resolve(id);
+    return def.kind === 'vector' ? (def.labelPaint?.[theme] ?? null) : null;
   },
 
   /** The style to give MapLibre. Vector basemaps are a URL; imagery is assembled at runtime. */

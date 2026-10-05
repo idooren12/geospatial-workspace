@@ -31,7 +31,7 @@ function useWorkspaceWiring() {
       const { basemapId, mapTheme } = useWorkspace.getState();
       const mine = ++request;
       void BasemapManager.styleFor(basemapId, mapTheme).then((style) => {
-        if (mine === request) mapService.setStyle(style); // ignore stale, slower requests
+        if (mine === request) mapService.setStyle(style, BasemapManager.labelPaintFor(basemapId, mapTheme)); // ignore stale, slower requests
       });
     };
     const offs = [

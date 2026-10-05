@@ -67,7 +67,9 @@ class FakeMap {
     l.layout = { ...l.layout, [k]: v };
   }
   setPaintProperty(id: string, k: string, v: unknown) {
-    const l = this.layers.find((x) => x.id === id)!;
+    const l = (this.layers.find((x) => x.id === id) ?? this.basemapLayers.find((x) => x.id === id)) as {
+      paint?: Record<string, unknown>;
+    };
     l.paint = { ...l.paint, [k]: v };
   }
   getStyle() {
@@ -183,6 +185,16 @@ describe('MapService', () => {
     svc.setLabelLanguage('en');
     expect(JSON.stringify(city())).toContain('name:en');
     expect(fake().basemapLayers[1]!.layout!['text-field']).toBe('{housenumber}');
+  });
+
+  it('recolours basemap place names when a label paint is given, and not otherwise', () => {
+    const { svc, fake } = setup();
+    fake().fire('style.load');
+    expect((fake().basemapLayers[0] as { paint?: object }).paint).toBeUndefined();
+    svc.setStyle('dark', { 'text-color': '#ccc', 'text-halo-color': '#000', 'text-halo-width': 1 });
+    fake().basemapLayers = [{ id: 'place-city', type: 'symbol', layout: { 'text-field': ['get', 'name'] } }];
+    fake().fire('style.load');
+    expect((fake().basemapLayers[0] as { paint?: Record<string, unknown> }).paint?.['text-color']).toBe('#ccc');
   });
 
   it('accepts event subscriptions before mount and detaches on unsubscribe', () => {

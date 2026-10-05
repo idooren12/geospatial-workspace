@@ -10,6 +10,7 @@ import type {
   FitBoundsOptions,
   FlyToOptions,
   LabelLanguage,
+  LabelPaint,
   LayerSpecification,
   LngLatBoundsLike,
   MapViewState,
@@ -30,6 +31,7 @@ export type ControlSlot = 'tools' | 'status';
 
 export interface MountOptions {
   style: StyleInput;
+  labelPaint?: LabelPaint | null;
   /** Saved camera; when absent the map fits `fallbackBounds`. */
   view?: MapViewState | null;
   fallbackBounds: LngLatBoundsLike;
@@ -74,6 +76,7 @@ export class MapService {
   private readonly subscriptions = new Set<Subscription>();
   private readonly styleLoadCallbacks = new Set<() => void>();
   private labelLanguage: LabelLanguage = 'he';
+  private labelPaint: LabelPaint | null = null;
   private controlCorner: ControlCorner = 'top-right';
   private nav: NavigationControl | null = null;
   private scale: ScaleControl | null = null;
@@ -102,6 +105,7 @@ export class MapService {
 
     this.container = el;
     this.labelLanguage = opts.labelLanguage;
+    this.labelPaint = opts.labelPaint ?? null;
     this.controlCorner = opts.controlCorner;
 
     const v = opts.view;
@@ -191,8 +195,10 @@ export class MapService {
 
   // ------------------------------------------------------------------ basemap
 
-  setStyle(style: StyleInput): void {
+  /** Switches basemap style. `labelPaint` recolours its place names once loaded. */
+  setStyle(style: StyleInput, labelPaint: LabelPaint | null = null): void {
     if (!this.map) return;
+    this.labelPaint = labelPaint;
     this.styleReady = false;
     this.map.setStyle(style, { diff: false });
   }
@@ -305,7 +311,13 @@ export class MapService {
     const expr = labelExpression(this.labelLanguage);
     for (const layer of map.getStyle().layers ?? []) {
       if (layer.type !== 'symbol' || layer.id.startsWith(WS_PREFIX)) continue;
-      if (isNameLabel(layer.layout?.['text-field'])) map.setLayoutProperty(layer.id, 'text-field', expr);
+      if (!isNameLabel(layer.layout?.['text-field'])) continue;
+      map.setLayoutProperty(layer.id, 'text-field', expr);
+      if (this.labelPaint) {
+        for (const [k, v] of Object.entries(this.labelPaint)) {
+          (map.setPaintProperty as (l: string, k: string, v: unknown) => void).call(map, layer.id, k, v);
+        }
+      }
     }
   }
 

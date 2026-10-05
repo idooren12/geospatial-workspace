@@ -14,6 +14,10 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
       light: 'https://tiles.openfreemap.org/styles/positron',
       dark: 'https://tiles.openfreemap.org/styles/dark',
     },
+    // The stock dark style's labels are too dim to read; lift them.
+    labelPaint: {
+      dark: { 'text-color': '#c9ced4', 'text-halo-color': '#0e1013', 'text-halo-width': 1.2 },
+    },
   },
   {
     id: 'satellite',

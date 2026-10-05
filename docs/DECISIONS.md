@@ -38,3 +38,21 @@ instead of ESLint plugin config. Rejected: ESLint + import plugins — more conf
 
 ## 2026-10-05 — Map controls on the side away from the main dock
 Navigation control top-right in LTR, top-left in RTL; scale in the opposite bottom corner.
+
+## 2026-10-05 — Full-bleed map; only the top bar is fixed (owner)
+The map runs edge to edge under the top bar. The status bar became a floating readout in the
+bottom corner of the map. Rails were empty and are removed for now; in M3 they return as thin
+floating toolbars over the map edge. Docked panels (M2) still take width from the map and never
+float over it (DCK-01). Supersedes the spec's fixed rail columns and status bar row.
+
+## 2026-10-05 — Basemaps: Map (light/dark) + Satellite; picker + separate theme switch (owner)
+`map` has light and dark variants; `satellite` is imagery with OpenFreeMap borders and place names
+recoloured on top (assembled at runtime, label style fetch times out after 4 s → imagery only).
+UI: a floating basemap picker (radio list, extensible for Terrain/Marine) and an icon switch that
+shows the theme it switches to. The old status-bar word toggle is gone. Stored `light`/`dark`
+ids migrate to `map` + theme. Dark labels are brightened per-basemap via `labelPaint`.
+
+## 2026-10-05 — OPEN: satellite imagery provider
+Using Esri World Imagery's public endpoint (no key) with attribution. Esri's terms may require an
+ArcGIS account/key for this use; not yet confirmed. Options: ArcGIS Location Platform key,
+MapTiler Satellite (key, free tier). Switching is a change in `basemaps.config.ts` only.
