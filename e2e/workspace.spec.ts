@@ -11,9 +11,12 @@ const box = async (page: Page, selector: string) => {
 };
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('e2e-seeded')) return;
+    sessionStorage.setItem('e2e-seeded', '1');
+    localStorage.clear();
+  });
   await page.goto('/');
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
   await page.locator('.maplibregl-canvas').waitFor();
 });
 

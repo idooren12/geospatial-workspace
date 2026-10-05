@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/global.css';
+import './app/builtinTools';
 import { initI18n } from './i18n';
 import { useWorkspace } from './store/workspaceStore';
 import { App } from './app/App';

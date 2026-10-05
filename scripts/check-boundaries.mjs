@@ -25,7 +25,7 @@ const files = walk(src).map((abs) => ({ abs, rel: relative(root, abs).split(sep)
 const errors = [];
 const report = (file, line, msg) => errors.push(`${file}:${line}  ${msg}`);
 
-const CORE = /^src\/(map|layout|layers|store|app|utilities|ui|styles)\//;
+const CORE = /^src\/(map|layout|layers|panels|store|app|utilities|ui|styles|i18n)\/|^src\/tools\/(ToolRegistry|types|index)\.ts$/;
 const DOMAIN = /\b(weather|grib|fresnel|linkBudget|link-budget|calculateRF|droneZone|lineOfSight)\b/i;
 const PROVIDER = /openfreemap\.org|tile\.openstreetmap\.org|api\.mapbox\.com|maptiler\.com/;
 const PHYSICAL_CSS =

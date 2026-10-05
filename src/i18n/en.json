@@ -6,7 +6,10 @@
   },
   "topbar": {
     "switchLanguage": "החלפה לעברית",
-    "languageShort": "עב"
+    "languageShort": "עב",
+    "mapOnly": "Map only (Ctrl+Shift+M)",
+    "exitMapOnly": "Exit map only (Esc)",
+    "settings": "Settings"
   },
   "status": {
     "cursor": "Cursor position",
@@ -25,5 +28,53 @@
   "theme": {
     "toDark": "Switch to dark map",
     "toLight": "Switch to light map"
+  },
+  "tools": {
+    "layers": "Layers",
+    "settings": "Settings",
+    "debug": "Debug",
+    "sample": "Sample panel"
+  },
+  "dock": {
+    "close": "Close {{name}}",
+    "menu": "Options for {{name}}",
+    "moveToOther": "Move to other side",
+    "split": "Split into own column",
+    "resize": "Resize panel",
+    "error": "This tool hit an error and stopped. The rest of the workspace keeps working."
+  },
+  "layers": {
+    "basemap": "Basemap",
+    "theme": "Map shade",
+    "light": "Light",
+    "dark": "Dark",
+    "layers": "Layers",
+    "empty": "No layers"
+  },
+  "settings": {
+    "language": "Language",
+    "units": "Units",
+    "metric": "Metric (m, km)",
+    "nautical": "Nautical (NM)",
+    "imperial": "Imperial (ft, mi)",
+    "coords": "Coordinate format",
+    "decimal": "Decimal degrees",
+    "dms": "Degrees, minutes, seconds",
+    "reset": "Reset workspace",
+    "resetConfirm": "Click again to reset everything",
+    "resetHint": "Restores map, panels and settings to defaults."
+  },
+  "debug": {
+    "mapInstances": "Map instances",
+    "bodyWidth": "Workspace width",
+    "mapWidth": "Map width",
+    "note": "Development-only panel; not on the live site."
+  },
+  "sample": {
+    "body": "Dummy panel for testing columns and tabs. Development builds only."
+  },
+  "rail": {
+    "left": "Primary tools",
+    "right": "Secondary tools"
   }
 }

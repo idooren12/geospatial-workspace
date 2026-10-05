@@ -48,3 +48,10 @@
   font-size: var(--fs-small);
   font-weight: 600;
 }
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin-inline: 4px;
+}

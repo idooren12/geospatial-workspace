@@ -1,0 +1,261 @@
+.area {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.columnCell {
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-1);
+}
+
+.splitterCell {
+  position: relative;
+  background: var(--border);
+}
+
+.splitter {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -3px;
+  width: 10px; /* hit area wider than the 4 px visible line */
+  cursor: col-resize;
+  z-index: 5;
+  touch-action: none;
+}
+
+.splitter:hover,
+.splitter:focus-visible,
+:global(body.gws-resizing) .splitter {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+:global(body.gws-resizing) {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.mapCell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Column */
+.column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--panel-header-h);
+  padding-inline: 10px 4px;
+  border-block-end: 1px solid var(--border);
+  flex: none;
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-ui);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+}
+
+.iconBtn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* Tabs */
+.tabs {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  align-self: stretch;
+  margin-inline-start: -10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  border-inline-end: 1px solid var(--border);
+  color: var(--text-dim);
+  flex: none;
+}
+
+.tab[data-selected='true'] {
+  color: var(--text);
+  background: var(--bg-2);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.tabLabel {
+  border: 0;
+  background: transparent;
+  padding-inline: 10px 4px;
+  height: 100%;
+  cursor: pointer;
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.tabClose {
+  width: 20px;
+  height: 20px;
+  margin-inline-end: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tabClose:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.panel {
+  padding: 10px 12px;
+}
+
+.panelError {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: #ff8a8d;
+  font-size: var(--fs-small);
+  margin: 0;
+}
+
+/* Panel menu */
+.menu {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+  min-width: 190px;
+  z-index: 40;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  outline: none;
+}
+
+.menuItem[data-highlighted] {
+  background: var(--bg-hover);
+}
+
+.menuItem[data-disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Rails: thin floating toolbars centred on the map's side edges. */
+.rail {
+  position: absolute;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: rgb(26 29 33 / 0.92);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.25);
+}
+
+.rail[data-side='left'] {
+  inset-inline-start: 8px;
+}
+
+.rail[data-side='right'] {
+  inset-inline-end: 8px;
+}
+
+.railBtn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  position: relative;
+}
+
+.railBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* Open (maybe behind another tab): a dot. Showing: highlighted. */
+.railBtn[data-open='true']::after {
+  content: '';
+  position: absolute;
+  inset-block-end: 4px;
+  inset-inline-end: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.railBtn[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--bg-2);
+}

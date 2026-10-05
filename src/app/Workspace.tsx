@@ -3,7 +3,9 @@ import { applyDocumentLanguage, dirOf } from '../i18n';
 import i18n from '../i18n';
 import { MapControls } from '../layout/overlay/MapControls';
 import { MapStatus } from '../layout/overlay/MapStatus';
+import { DockArea } from '../layout/DockArea';
 import { TopBar } from '../layout/TopBar';
+import { toolRegistry } from '../tools/ToolRegistry';
 import { WorkspaceLayout } from '../layout/WorkspaceLayout';
 import { BasemapManager } from '../map/BasemapManager';
 import { mapService } from '../map/MapService';
@@ -55,11 +57,31 @@ function useWorkspaceWiring() {
   }, []);
 }
 
+/** Ctrl+Shift+M toggles Map Only; Escape leaves it (unless a menu/popover took the key). */
+function useShortcuts() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const s = useWorkspace.getState();
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        s.setMapOnly(!s.dock.mapOnly);
+      } else if (e.key === 'Escape' && s.dock.mapOnly && !e.defaultPrevented) {
+        s.setMapOnly(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+}
+
 export function Workspace() {
   useWorkspaceWiring();
+  useShortcuts();
+  // Stored layouts may name tools that no longer exist.
+  useEffect(() => useWorkspace.getState().pruneDock(toolRegistry.ids()), []);
   return (
     <>
-      <WorkspaceLayout topBar={<TopBar />} map={<MapView />} />
+      <WorkspaceLayout topBar={<TopBar />} body={<DockArea map={<MapView />} />} />
       <MapControls />
       <MapStatus />
     </>

@@ -2,20 +2,13 @@
 
 Order follows the implementation spec. M2 and M3 can run in parallel after M1.
 
-## M2 — Dock System  ← next
-- [ ] `dockPlanner.ts`: pure open/close/reflow planner + unit tests for every branch (spec §4.3–4.4)
-- [ ] Grid columns from dock state; splitters (pointer + keyboard, clamp 220–450, map ≥ 500)
-- [ ] Tab groups when space runs out; tab strip; close per tab
-- [ ] Map Only mode with layout restore (button, Ctrl+Shift+M, Escape)
-- [ ] Persist dock state (debounced); reflow on restore and on window resize
-- [ ] E2E for DCK-01..05 in Hebrew and English
-
-## M3 — Layers + Tools
-- [ ] ToolRegistry + ToolContext; floating rails over the map edge, built from the registry
-- [ ] LayerManager (store → MapService diff) and Layers panel
+## M3 — Layers + Tools  ← next
+- [ ] LayerManager (store → MapService diff) + layer list in the Layers panel (show/hide, opacity,
+      rename, reorder by drag and keyboard, remove) — spec §7.1
+- [ ] `ToolContext.layers` API for tools (creates `ws:` layers, tags ownerToolId)
+- [ ] Debug panel: add/remove a test layer (dev only) to exercise the LayerManager
+- [ ] Inspector tool (click a feature → its properties)
 - [ ] Decide satellite provider/key (open decision)
-- [ ] Settings tool (language, units, coordinate format, reset workspace)
-- [ ] Inspector tool; Debug tool (dev only: test layer, open N panels)
 
 ## M4 — Utilities
 - [ ] terra-draw DrawController; Sketch layer in sessionStorage
@@ -32,3 +25,7 @@ Order follows the implementation spec. M2 and M3 can run in parallel after M1.
 - [x] M1 — Map Core: MapService, MapView, BasemapManager (Light/Dark), Hebrew/English labels,
       view persistence, Israel first view, language switch
 - [x] Satellite basemap, basemap picker, light/dark switch, full-bleed map with floating readout
+- [x] M2 — Dock: planner, columns, splitters, tabs, tab menu (move side / split), Map Only
+      (button, Ctrl+Shift+M, Esc), persistence + reflow on resize, E2E DCK-01..05 in he/en
+- [x] From M3: Tool Registry + ToolContext, floating rails, Layers panel (basemap section,
+      empty layers), Settings panel (language, units, coordinates, reset), dev Debug/Sample

@@ -56,3 +56,17 @@ ids migrate to `map` + theme. Dark labels are brightened per-basemap via `labelP
 Using Esri World Imagery's public endpoint (no key) with attribution. Esri's terms may require an
 ArcGIS account/key for this use; not yet confirmed. Options: ArcGIS Location Platform key,
 MapTiler Satellite (key, free tier). Switching is a change in `basemaps.config.ts` only.
+
+## 2026-10-05 — M2 dock: pure planner, tool registry pulled forward
+- All layout decisions live in `src/layout/dockPlanner.ts` (pure, unit tested incl. a randomized
+  invariant test). The store calls it; components only render.
+- Open order: new column at default/remembered width → narrower column (≥ 220) → tab in the side's
+  innermost column → make room on the other side. Body < 900 px: one column per side.
+- Map Only keeps the columns in state and only hides them (no snapshot needed); opening a panel
+  from a rail leaves Map Only.
+- Splitter drags write the grid template to the DOM directly and commit on release (no re-render
+  per pixel); keyboard: arrows ±16, Home/End.
+- The Tool Registry, floating rails and two real panels (Layers, Settings) came forward from M3 —
+  a dock with nothing to open is not testable. Debug + Sample panels are dev-only (absent in prod).
+- Rails are floating pills centred vertically on the map's side edges, clear of the MapLibre
+  control corners. Built-in panels live in `src/panels`, registered in `src/app/builtinTools.tsx`.

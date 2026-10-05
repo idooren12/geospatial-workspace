@@ -1,4 +1,5 @@
 import type { MapTheme, MapViewState, ScaleUnit } from '../map/types';
+import { emptyDock, sanitizeDock, type DockState } from '../layout/dockPlanner';
 
 export const STORAGE_KEY = 'gws:workspace:v1';
 export const SCHEMA_VERSION = 1;
@@ -18,6 +19,7 @@ export interface PersistedWorkspace {
   basemapId: string;
   mapTheme: MapTheme;
   settings: Settings;
+  dock: DockState;
 }
 
 /** Storage can throw (private mode, full quota, blocked site data); never let it break the app. */
@@ -62,6 +64,7 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     basemapId: defaultBasemapId,
     mapTheme: 'light',
     settings: { ...DEFAULT_SETTINGS },
+    dock: emptyDock(),
   };
   if (!raw) return empty;
   let data: unknown;
@@ -83,6 +86,8 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
       units: pick(s.units, ['metric', 'nautical', 'imperial'] as const, DEFAULT_SETTINGS.units),
       coordFormat: pick(s.coordFormat, ['decimal', 'dms'] as const, DEFAULT_SETTINGS.coordFormat),
     },
+    // Structure only here; unknown tool ids are pruned once tools are registered.
+    dock: sanitizeDock(o.dock, null),
   };
 }
 

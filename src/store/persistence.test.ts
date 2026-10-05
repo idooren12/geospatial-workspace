@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { emptyDock } from '../layout/dockPlanner';
 import { DEFAULT_SETTINGS, parseWorkspace, SCHEMA_VERSION } from './persistence';
 import { createWorkspaceStore, startPersistence } from './workspaceStore';
 
@@ -6,7 +7,14 @@ describe('parseWorkspace', () => {
   it('returns defaults for empty or corrupt storage', () => {
     for (const raw of [null, '', '{bad json', '42', 'null']) {
       const ws = parseWorkspace(raw, 'map');
-      expect(ws).toEqual({ version: SCHEMA_VERSION, view: null, basemapId: 'map', mapTheme: 'light', settings: DEFAULT_SETTINGS });
+      expect(ws).toEqual({
+        version: SCHEMA_VERSION,
+        view: null,
+        basemapId: 'map',
+        mapTheme: 'light',
+        settings: DEFAULT_SETTINGS,
+        dock: emptyDock(),
+      });
     }
   });
 
@@ -30,6 +38,11 @@ describe('parseWorkspace', () => {
   it('migrates the old light/dark basemap ids to map + theme', () => {
     expect(parseWorkspace(JSON.stringify({ basemapId: 'dark' }), 'map')).toMatchObject({ basemapId: 'map', mapTheme: 'dark' });
     expect(parseWorkspace(JSON.stringify({ basemapId: 'light' }), 'map')).toMatchObject({ basemapId: 'map', mapTheme: 'light' });
+  });
+
+  it('restores a stored dock layout', () => {
+    const dock = { mapOnly: false, widthMemory: {}, columns: { left: [{ id: 'c', width: 300, panelIds: ['layers'], activePanelId: 'layers' }], right: [] } };
+    expect(parseWorkspace(JSON.stringify({ dock }), 'map').dock).toEqual(dock);
   });
 
   it('drops an impossible view', () => {
