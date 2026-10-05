@@ -130,6 +130,11 @@ export class MapService {
     this.styleReady = false;
   }
 
+  /** Raw map for the `?debug` console hook only. Never call from app code. */
+  debugMap(): MlMap | null {
+    return this.map;
+  }
+
   get isMounted(): boolean {
     return this.map !== null;
   }
@@ -314,6 +319,12 @@ function assertWsId(id: string): void {
 /** The workspace's one map service. */
 export const mapService = new MapService();
 
-if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as unknown as { __gws: { mapService: MapService } }).__gws = { mapService };
+/** Debug hook: always on in dev, and on any build when the URL has `?debug`. Read-only by convention. */
+if (typeof window !== 'undefined' && (import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug'))) {
+  (window as unknown as { __gws: unknown }).__gws = {
+    mapService,
+    get map() {
+      return mapService.debugMap();
+    },
+  };
 }
