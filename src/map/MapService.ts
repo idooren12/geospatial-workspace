@@ -146,6 +146,22 @@ export class MapService {
     return this.map;
   }
 
+  /**
+   * Raw map for map infrastructure inside src/map that must talk to MapLibre directly
+   * (the drawing adapter). Tools and UI never get this; they use ToolContext / MapService.
+   */
+  internalMap(): MlMap | null {
+    return this.map;
+  }
+
+  /** Drawing tools turn this off so a double click finishes a shape instead of zooming. */
+  setDoubleClickZoom(enabled: boolean): void {
+    const h = this.map?.doubleClickZoom;
+    if (!h) return;
+    if (enabled) h.enable();
+    else h.disable();
+  }
+
   get isMounted(): boolean {
     return this.map !== null;
   }

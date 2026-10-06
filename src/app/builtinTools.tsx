@@ -1,6 +1,7 @@
-import { Bug, Layers, PanelTop, Settings } from 'lucide-react';
+import { Bug, Layers, PanelTop, Ruler, Settings } from 'lucide-react';
 import { DebugPanel, SamplePanel } from '../panels/DebugPanel';
 import { LayersPanel } from '../panels/LayersPanel';
+import { MeasureDrawPanel } from '../panels/MeasureDrawPanel';
 import { SettingsPanel } from '../panels/SettingsPanel';
 import { toolRegistry } from '../tools';
 
@@ -14,6 +15,17 @@ toolRegistry.register({
   component: LayersPanel,
   order: 0,
   rail: false, // opened from the layers button on the map
+});
+
+toolRegistry.register({
+  id: 'measure',
+  name: 'Measure & draw',
+  nameKey: 'tools.measure',
+  icon: <Ruler size={18} aria-hidden />,
+  defaultDock: 'right',
+  component: MeasureDrawPanel,
+  order: 10,
+  rail: false, // opened from the ruler button on the map
 });
 
 toolRegistry.register({

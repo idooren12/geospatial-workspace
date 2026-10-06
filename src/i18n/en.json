@@ -33,7 +33,8 @@
     "layers": "Layers",
     "settings": "Settings",
     "debug": "Debug",
-    "sample": "Sample panel"
+    "sample": "Sample panel",
+    "measure": "Measure & draw"
   },
   "dock": {
     "close": "Close {{name}}",
@@ -97,5 +98,31 @@
   "rail": {
     "left": "Primary tools",
     "right": "Secondary tools"
+  },
+  "measure": {
+    "measure": "Measure",
+    "draw": "Draw",
+    "distance": "Distance",
+    "area": "Area",
+    "point": "Point",
+    "line": "Line",
+    "polygon": "Polygon",
+    "stop": "Stop",
+    "clear": "Clear measurement",
+    "result": "Result",
+    "perimeter": "Perimeter",
+    "points": "{{count}} points",
+    "live": "while drawing",
+    "empty": "Pick distance or area, then click on the map.",
+    "sketchName": "Sketch",
+    "sketchCount": "{{count}} shapes in the Sketch layer",
+    "sketchEmpty": "No shapes in the sketch yet.",
+    "undoLast": "Delete last",
+    "clearSketch": "Clear sketch",
+    "sketchNote": "The sketch is kept until the tab closes and is listed under Layers.",
+    "hintPoint": "Click the map to add a point.",
+    "hintLine": "Click to add points. Double click or Enter finishes, Esc cancels.",
+    "hintPolygon": "Click to add corners. Click the first point or press Enter to close, Esc cancels.",
+    "units": "Units: {{units}} (change in Settings)"
   }
 }

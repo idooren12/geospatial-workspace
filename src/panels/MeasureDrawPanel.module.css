@@ -1,0 +1,82 @@
+.tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px;
+  margin-block-end: 10px;
+}
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+
+.tool:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.tool[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--bg-2);
+  border-color: var(--accent);
+}
+
+.result {
+  padding: 10px 12px;
+  margin-block-end: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+}
+
+.value {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta {
+  margin-block-start: 2px;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+}
+
+.row button {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.row button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hint {
+  position: sticky;
+  inset-block-end: 0;
+  margin: 12px -12px -10px;
+  padding: 8px 12px;
+  border-block-start: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-1));
+  font-size: var(--fs-small);
+  color: var(--text);
+}

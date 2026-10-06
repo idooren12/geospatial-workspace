@@ -2,14 +2,9 @@
 
 Order follows the implementation spec.
 
-## M4 — Utilities  ← next
-- [ ] terra-draw DrawController (point / line / polygon / select); Sketch layer, persist: 'session'
-- [ ] Distance and area measurement with the unit setting (m/km, NM, ft/mi)
-- [ ] Re-init drawing after basemap switch; Escape cancels the current sketch
-- [ ] Measure & Draw panel (on the rail)
-
-## M5 — Hardening
+## M5 — Hardening  ← next
 - [ ] Inspector tool (click a feature → its properties)
+- [ ] Optional: edit existing sketch shapes (terra-draw select mode); measurement label on the map
 - [ ] Optional: sync open tabs via the `storage` event
 - [ ] Accessibility pass (keyboard, aria, focus), performance checks
 - [ ] Full DoD checklist (21 items) at 1366/1920/2560, both languages
@@ -29,3 +24,5 @@ Order follows the implementation spec.
       LayerManager diff-sync to MapService (opacity multiplies style opacity, in-place GeoJSON
       updates, z-order), `ToolContext.layers`, layer list (show/hide, opacity, rename by double
       click / F2 / menu, reorder by drag, keyboard and menu, remove), dev test-layer buttons
+- [x] M4 — Measure (distance, area; live; units; dunams) and draw (point/line/polygon → session
+      Sketch layer, undo, clear) from a ruler button; terra-draw rebuilt across basemap switches

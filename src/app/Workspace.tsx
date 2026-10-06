@@ -9,7 +9,9 @@ import { toolRegistry } from '../tools/ToolRegistry';
 import { LayerManager } from '../layers/LayerManager';
 import { WorkspaceLayout } from '../layout/WorkspaceLayout';
 import { BasemapManager } from '../map/BasemapManager';
+import { drawController } from '../map/draw/DrawController';
 import { mapService } from '../map/MapService';
+import { addToSketch } from '../utilities/draw/sketch';
 import { MapView } from '../map/MapView';
 import { startPersistence, useWorkspace } from '../store/workspaceStore';
 
@@ -43,6 +45,12 @@ function useWorkspaceWiring() {
     });
     exposeLayersForDebug();
     return off;
+  }, []);
+
+  // Drawing engine: attach once the map exists; finished shapes go to the Sketch layer.
+  useEffect(() => {
+    void mapService.whenMounted().then(() => drawController.wire());
+    return drawController.onSketch((f) => addToSketch(f, i18n.t('measure.sketchName')));
   }, []);
 
   // Store → map / document. Subscriptions fire on change only, never on mount.

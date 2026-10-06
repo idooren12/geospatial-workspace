@@ -95,3 +95,19 @@ domain tools (and dev-only tools). In production the rails are currently empty a
 React StrictMode re-ran the wiring effect and a second LayerManager re-added restored layers, so
 MapService recorded duplicates. Now `MapService.addLayer` with an existing id replaces it, and the
 LayerManager is a module-level singleton like the map.
+
+## 2026-10-06 — M4 measure & draw
+- terra-draw + its MapLibre adapter behind `src/map/draw/DrawController.ts` (in src/map because it
+  needs the raw map; `MapService.internalMap()` exists only for that). Rebuilt after every style
+  load (setStyle wipes its layers); the current measurement is restored.
+- Opened from a ruler button in the map controls (no rail button, owner's preference for built-ins).
+- Measure: one temporary distance or area at a time, live while drawing, cleared when the panel
+  closes or another tool is picked. Geodesic via Turf. Units follow Settings; metric areas also in
+  dunams in Hebrew. Hebrew abbreviations use gershayim (ק״מ, מ״ר).
+- Draw: point / line / polygon go into one fixed-id `sketch` workspace layer (persist: session),
+  listed under Layers; delete-last and clear. Escape cancels the shape in progress, Enter finishes.
+- Pitfall: terra-draw disables MapLibre double-click zoom whenever any mode starts (even idle);
+  DrawController re-enables it when no tool is active. Guarded by an E2E test.
+- E2E now serves a tiny local style (`e2e/fixtures.ts`) so the map fully loads offline; used by
+  the draw tests.
+- Not in Stage 0: editing existing sketch shapes (select mode), measurement labels on the map.

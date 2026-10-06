@@ -2,7 +2,7 @@
 
 Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-workspace`, deploys on push to `main`).
 
-## Works now (M0–M3)
+## Works now (M0–M4)
 - One MapLibre instance; Map (light/dark) and Satellite basemaps; Hebrew RTL default, English.
 - Full-bleed map under a fixed top bar (Map Only, Settings, language). Floating map controls:
   zoom/compass, layers button (opens the Layers panel), light/dark switch; floating readout.
@@ -15,10 +15,15 @@ Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-worksp
   none. Survive basemap switches and refresh. Dev Debug panel adds GeoJSON test layers.
 - `?debug` exposes `window.__gws` (`mapService`, `map`, `layers.add/remove/list`) on any build.
 
+- Measure & draw (M4): ruler button in the map controls opens the panel. Distance / area
+  (geodesic, live, units from Settings, dunams in Hebrew); point / line / polygon into a session
+  Sketch layer (listed under Layers; undo, clear). Escape cancels, Enter finishes.
+- Tests: 72 unit, 135 E2E (he/en × 1366/1920/2560).
+
 ## Next step
-M4 — Utilities: terra-draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) behind a
-DrawController in `src/utilities/draw`, a Measure & Draw panel on the rail, measurement with the
-unit setting, and a Sketch layer with `persist: 'session'`. See docs/ROADMAP.md.
+M5 — Hardening: walk the 21-item Definition of Done at all three sizes in both languages, an
+accessibility pass (keyboard paths, focus, aria), performance checks, then the architecture review
+gate before Stage 1. Optional extras listed in docs/ROADMAP.md.
 
 ## Known issues
 - Satellite provider terms are an open decision (docs/DECISIONS.md).
