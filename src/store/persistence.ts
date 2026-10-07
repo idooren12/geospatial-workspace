@@ -1,6 +1,7 @@
 import type { MapTheme, MapViewState, ScaleUnit } from '../map/types';
 import { emptyDock, sanitizeDock, type DockState } from '../layout/dockPlanner';
 import { LAYER_TYPES, type WorkspaceLayer } from '../layers/layerTypes';
+import type { SavedMeasurement } from '../utilities/measure/types';
 
 export const STORAGE_KEY = 'gws:workspace:v1';
 export const SCHEMA_VERSION = 1;
@@ -23,6 +24,7 @@ export interface PersistedWorkspace {
   dock: DockState;
   /** Only layers with persist: 'local'. Session layers live in sessionStorage. */
   layers: StoredLayers;
+  measurements: SavedMeasurement[];
 }
 
 export interface StoredLayers {
@@ -78,6 +80,7 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     settings: { ...DEFAULT_SETTINGS },
     dock: emptyDock(),
     layers: emptyLayers(),
+    measurements: [],
   };
   if (!raw) return empty;
   let data: unknown;
@@ -102,7 +105,34 @@ export function parseWorkspace(raw: string | null, defaultBasemapId: string): Pe
     // Structure only here; unknown tool ids are pruned once tools are registered.
     dock: sanitizeDock(o.dock, null),
     layers: parseLayers(o.layers),
+    measurements: parseMeasurements(o.measurements),
   };
+}
+
+const isPair = (p: unknown): p is [number, number] =>
+  Array.isArray(p) && p.length >= 2 && isNum(p[0]) && isNum(p[1]) && Math.abs(p[1]) <= 90;
+
+/** Saved measurements, validated one by one. */
+export function parseMeasurements(raw: unknown): SavedMeasurement[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SavedMeasurement[] = [];
+  for (const m of raw) {
+    if (!m || typeof m !== 'object') continue;
+    const o = m as Record<string, unknown>;
+    if (typeof o.id !== 'string' || typeof o.name !== 'string') continue;
+    if (o.kind !== 'distance' && o.kind !== 'area') continue;
+    const coords = Array.isArray(o.coordinates) ? o.coordinates.filter(isPair).map((p) => [p[0], p[1]] as [number, number]) : [];
+    if (coords.length < (o.kind === 'area' ? 3 : 2)) continue;
+    out.push({
+      id: o.id,
+      name: o.name,
+      kind: o.kind,
+      coordinates: coords,
+      visible: o.visible !== false,
+      createdAt: isNum(o.createdAt) ? o.createdAt : 0,
+    });
+  }
+  return out;
 }
 
 /** Validates stored layers one by one; a malformed layer is dropped, the rest survive. */

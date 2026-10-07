@@ -6,10 +6,13 @@ export const test = base.extend<{ offlineStyles: void }>({
     async ({ page }, use) => {
       const style = {
         version: 8,
+        // Label layers (drawing and measurement names) need a glyphs URL; served empty below.
+        glyphs: 'https://glyphs.e2e.test/{fontstack}/{range}.pbf',
         sources: {},
         layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#dfe3e6' } }],
       };
       await page.route(/tiles\.openfreemap\.org\/styles\//, (r) => r.fulfill({ json: style }));
+      await page.route(/glyphs\.e2e\.test/, (r) => r.fulfill({ status: 204, body: '' }));
       await page.route(/arcgisonline\.com/, (r) => r.fulfill({ status: 204, body: '' }));
       await use();
     },

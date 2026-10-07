@@ -1,4 +1,4 @@
-# Status — 2026-10-05
+# Status — 2026-10-07
 
 Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-workspace`, deploys on push to `main`).
 
@@ -15,10 +15,15 @@ Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-worksp
   none. Survive basemap switches and refresh. Dev Debug panel adds GeoJSON test layers.
 - `?debug` exposes `window.__gws` (`mapService`, `map`, `layers.add/remove/list`) on any build.
 
-- Measure & draw (M4): ruler button in the map controls opens the panel. Distance / area
-  (geodesic, live, units from Settings, dunams in Hebrew); point / line / polygon into a session
-  Sketch layer (listed under Layers; undo, clear). Escape cancels, Enter finishes.
-- Tests: 72 unit, 135 E2E (he/en × 1366/1920/2560).
+- Measurements (M4): ruler button → Measurements panel. Distance / area (geodesic, live, units
+  from Settings, dunams in Hebrew); Save keeps a named measurement in its own list (show/hide,
+  rename, zoom, delete), drawn and labelled on the map, saved with the workspace.
+- Drawing (M4): pencil button → Draw panel. Point / line / polygon go into the chosen drawing layer
+  (first one auto-created; "+ new layer…"); shapes are named and labelled on the map; rename,
+  zoom, delete. Drawing layers appear under Layers with their shapes listed.
+- Clicking a drawn shape or saved measurement on the map opens its panel and highlights it.
+  Escape cancels a shape in progress, Enter finishes.
+- Tests: 74 unit, 153 E2E (he/en × 1366/1920/2560).
 
 ## Next step
 M5 — Hardening: walk the 21-item Definition of Done at all three sizes in both languages, an

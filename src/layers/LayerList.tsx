@@ -11,11 +11,15 @@ import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifi
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ArrowDown, ArrowUp, ChevronDown, Eye, EyeOff, GripVertical, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Eye, EyeOff, GripVertical, Hexagon, MapPin, MoreVertical, Pencil, Spline, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkspace } from '../store/workspaceStore';
 import { toolRegistry } from '../tools/ToolRegistry';
+import { EditableName } from '../ui/EditableName';
+import { useReveal } from '../ui/useReveal';
+import ui from '../ui/ui.module.css';
+import { featuresOf, isDrawingLayer, removeDrawing, renameDrawing, type DrawingFeature } from '../utilities/draw/drawingLayers';
 import type { WorkspaceLayer } from './layerTypes';
 import styles from './LayerList.module.css';
 
@@ -67,8 +71,22 @@ function LayerRow({ id, isTop, isBottom }: { id: string; isTop: boolean; isBotto
   const order = useWorkspace((s) => s.layerOrder);
   const { setLayerVisible, setLayerOpacity, renameLayer, removeLayer, moveLayer } = useWorkspace.getState();
   const [editing, setEditing] = useState(false);
-  const [open, setOpen] = useState(false);
+  // Opened by the panel itself when it mounts because of a reveal request.
+  const [open, setOpen] = useState(() => {
+    const f = useWorkspace.getState().focus;
+    return f?.kind === 'layer' && f.id === id;
+  });
   const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({ id });
+  // A click on this layer's feature on the map (picking.ts) reveals the row: expand, scroll, flash.
+  const focusSeq = useWorkspace((s) => (s.focus?.kind === 'layer' && s.focus.id === id ? s.focus.seq : undefined));
+  const focusFid = useWorkspace((s) => (s.focus?.kind === 'layer' && s.focus.id === id ? s.focus.featureId : undefined));
+  const rowRef = useReveal(focusSeq !== undefined, focusSeq);
+  const [seenSeq, setSeenSeq] = useState(focusSeq);
+  if (focusSeq !== seenSeq) {
+    // Adjust state while rendering (React's pattern for reacting to a changed input).
+    setSeenSeq(focusSeq);
+    if (focusSeq !== undefined) setOpen(true);
+  }
   if (!layer) return null;
 
   const index = order.indexOf(id);
@@ -83,7 +101,10 @@ function LayerRow({ id, isTop, isBottom }: { id: string; isTop: boolean; isBotto
 
   return (
     <li
-      ref={setNodeRef}
+      ref={(el) => {
+        setNodeRef(el);
+        rowRef.current = el;
+      }}
       style={style}
       className={styles.row}
       data-dragging={isDragging}
@@ -187,7 +208,7 @@ function LayerRow({ id, isTop, isBottom }: { id: string; isTop: boolean; isBotto
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
-      {open && <LayerDetails layer={layer} onOpacity={(o) => setLayerOpacity(id, o)} />}
+      {open && <LayerDetails layer={layer} focusFid={focusFid} focusSeq={focusSeq} onOpacity={(o) => setLayerOpacity(id, o)} />}
     </li>
   );
 }
@@ -226,8 +247,16 @@ function RenameInput({ initial, onDone }: { initial: string; onDone: (name: stri
   );
 }
 
-function LayerDetails({ layer, onOpacity }: { layer: WorkspaceLayer; onOpacity: (o: number) => void }) {
+interface DetailsProps {
+  layer: WorkspaceLayer;
+  focusFid: string | undefined;
+  focusSeq: number | undefined;
+  onOpacity: (o: number) => void;
+}
+
+function LayerDetails({ layer, focusFid, focusSeq, onOpacity }: DetailsProps) {
   const { t } = useTranslation();
+  const drawings = isDrawingLayer(layer) ? featuresOf(layer) : null;
   const owner = layer.ownerToolId ? toolRegistry.get(layer.ownerToolId) : undefined;
   const pct = Math.round(layer.opacity * 100);
   return (
@@ -263,6 +292,47 @@ function LayerDetails({ layer, onOpacity }: { layer: WorkspaceLayer; onOpacity: 
           </>
         )}
       </dl>
+      {drawings && (
+        <div className={styles.drawings}>
+          <div className={styles.subTitle}>
+            {t('layers.drawings')} ({drawings.length})
+          </div>
+          <ul className={ui.items} data-testid="layer-drawings">
+            {drawings.map((f) => (
+              <DrawingItem
+                key={f.properties.fid}
+                layerId={layer.id}
+                f={f}
+                seq={focusFid === f.properties.fid ? focusSeq : undefined}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
+  );
+}
+
+const KIND_ICON = { point: MapPin, line: Spline, polygon: Hexagon } as const;
+
+function DrawingItem({ layerId, f, seq }: { layerId: string; f: DrawingFeature; seq: number | undefined }) {
+  const { t } = useTranslation();
+  const ref = useReveal(seq !== undefined, seq);
+  const Icon = KIND_ICON[f.properties.kind];
+  const name = f.properties.name;
+  return (
+    <li ref={ref} className={ui.item} data-testid={`layer-drawing-${f.properties.fid}`}>
+      <Icon size={14} aria-hidden className={ui.itemValue} />
+      <EditableName value={name} onRename={(n) => renameDrawing(layerId, f.properties.fid, n)} testId="layer-drawing-name" />
+      <button
+        type="button"
+        className={ui.iconBtn}
+        aria-label={t('common.delete', { name })}
+        title={t('common.delete', { name })}
+        onClick={() => removeDrawing(layerId, f.properties.fid)}
+      >
+        <Trash2 size={14} aria-hidden />
+      </button>
+    </li>
   );
 }

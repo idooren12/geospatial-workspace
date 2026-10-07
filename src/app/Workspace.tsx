@@ -11,7 +11,9 @@ import { WorkspaceLayout } from '../layout/WorkspaceLayout';
 import { BasemapManager } from '../map/BasemapManager';
 import { drawController } from '../map/draw/DrawController';
 import { mapService } from '../map/MapService';
-import { addToSketch } from '../utilities/draw/sketch';
+import { addDrawing, type DrawingKind } from '../utilities/draw/drawingLayers';
+import { syncMeasurements } from '../utilities/measure/measurementOverlay';
+import { wirePicking } from '../layers/picking';
 import { MapView } from '../map/MapView';
 import { startPersistence, useWorkspace } from '../store/workspaceStore';
 
@@ -49,8 +51,29 @@ function useWorkspaceWiring() {
 
   // Drawing engine: attach once the map exists; finished shapes go to the Sketch layer.
   useEffect(() => {
-    void mapService.whenMounted().then(() => drawController.wire());
-    return drawController.onSketch((f) => addToSketch(f, i18n.t('measure.sketchName')));
+    void mapService.whenMounted().then(() => {
+      drawController.wire();
+      wirePicking();
+    });
+    return drawController.onSketch((f) => {
+      const kind: DrawingKind = f.geometry.type === 'Point' ? 'point' : f.geometry.type === 'Polygon' ? 'polygon' : 'line';
+      addDrawing(f, kind, {
+        kind: (k, n) => i18n.t(`draw.kind_${k}`, { n }),
+        newLayer: (n) => i18n.t('draw.defaultLayer', { n }),
+      });
+    });
+  }, []);
+
+  // Saved measurements → map (labels follow units and language).
+  useEffect(() => {
+    const run = () => {
+      const s = useWorkspace.getState();
+      syncMeasurements(s.measurements, s.settings.units, s.settings.language);
+    };
+    run();
+    return useWorkspace.subscribe((s) => [s.measurements, s.settings.units, s.settings.language] as const, run, {
+      equalityFn: (a, b) => a.every((v, i) => v === b[i]),
+    });
   }, []);
 
   // Store → map / document. Subscriptions fire on change only, never on mount.

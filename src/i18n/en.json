@@ -34,7 +34,8 @@
     "settings": "Settings",
     "debug": "Debug",
     "sample": "Sample panel",
-    "measure": "Measure & draw"
+    "measure": "Measurements",
+    "draw": "Draw"
   },
   "dock": {
     "close": "Close {{name}}",
@@ -69,7 +70,8 @@
     "type_vector": "Vector",
     "type_raster": "Raster",
     "type_custom": "Custom",
-    "topHint": "The top layer draws above the others."
+    "topHint": "The top layer draws above the others.",
+    "drawings": "Drawings"
   },
   "settings": {
     "language": "Language",
@@ -114,15 +116,33 @@
     "points": "{{count}} points",
     "live": "while drawing",
     "empty": "Pick distance or area, then click on the map.",
-    "sketchName": "Sketch",
-    "sketchCount": "{{count}} shapes in the Sketch layer",
-    "sketchEmpty": "No shapes in the sketch yet.",
-    "undoLast": "Delete last",
-    "clearSketch": "Clear sketch",
-    "sketchNote": "The sketch is kept until the tab closes and is listed under Layers.",
     "hintPoint": "Click the map to add a point.",
     "hintLine": "Click to add points. Double click or Enter finishes, Esc cancels.",
     "hintPolygon": "Click to add corners. Click the first point or press Enter to close, Esc cancels.",
-    "units": "Units: {{units}} (change in Settings)"
+    "units": "Units: {{units}} (change in Settings)",
+    "save": "Save",
+    "saveName": "Measurement name",
+    "defaultName": "Measurement {{n}}",
+    "saved": "Saved measurements",
+    "savedEmpty": "No saved measurements. When you finish measuring, you can save it with a name."
+  },
+  "common": {
+    "nameInput": "Name",
+    "zoomTo": "Zoom to {{name}}",
+    "delete": "Delete {{name}}"
+  },
+  "draw": {
+    "layer": "Drawing layer",
+    "newLayerOption": "+ New layer…",
+    "newLayerName": "New layer name",
+    "create": "Create",
+    "defaultLayer": "Drawing {{n}}",
+    "firstHint": "Drawings will be kept in this layer. Name it, or just start drawing.",
+    "targetHint": "Each new drawing goes into the selected layer. Layers are also listed under Layers.",
+    "inLayer": "Drawings in “{{name}}”",
+    "empty": "No drawings in this layer yet.",
+    "kind_point": "Point {{n}}",
+    "kind_line": "Line {{n}}",
+    "kind_polygon": "Polygon {{n}}"
   }
 }

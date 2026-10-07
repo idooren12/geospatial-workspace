@@ -1,4 +1,5 @@
-import { Layers, Moon, Ruler, Sun } from 'lucide-react';
+import { Layers, Moon, Pencil, Ruler, Sun } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { BasemapManager } from '../../map/BasemapManager';
@@ -11,6 +12,7 @@ import { MapButton } from './MapButton';
 const LAYERS_PANEL = 'layers';
 /** Panel id of the built-in Measure & draw panel. */
 const MEASURE_PANEL = 'measure';
+const DRAW_PANEL = 'draw';
 import styles from './overlay.module.css';
 
 /** Layers, measure & draw, and light/dark buttons, rendered inside the map under the zoom controls. */
@@ -18,7 +20,8 @@ export function MapControls() {
   return createPortal(
     <div className={styles.group}>
       <LayersButton />
-      <MeasureButton />
+      <PanelButton panel={MEASURE_PANEL} labelKey="tools.measure" icon={<Ruler size={16} aria-hidden />} testId="measure-button" />
+      <PanelButton panel={DRAW_PANEL} labelKey="tools.draw" icon={<Pencil size={16} aria-hidden />} testId="draw-button" />
       <ThemeToggle />
     </div>,
     mapService.getControlSlot('tools'),
@@ -41,19 +44,13 @@ function LayersButton() {
   );
 }
 
-/** Opens the Measure & draw panel. */
-function MeasureButton() {
+/** Opens one of the built-in tool panels; pressed while that panel shows. */
+function PanelButton({ panel, labelKey, icon, testId }: { panel: string; labelKey: string; icon: ReactNode; testId: string }) {
   const { t } = useTranslation();
-  const showing = useWorkspace((s) => !s.dock.mapOnly && isActive(s.dock, MEASURE_PANEL));
+  const showing = useWorkspace((s) => !s.dock.mapOnly && isActive(s.dock, panel));
   const toggle = useWorkspace((s) => s.togglePanel);
   return (
-    <MapButton
-      label={t('tools.measure')}
-      icon={<Ruler size={16} aria-hidden />}
-      aria-pressed={showing}
-      onClick={() => toggle(MEASURE_PANEL)}
-      data-testid="measure-button"
-    />
+    <MapButton label={t(labelKey)} icon={icon} aria-pressed={showing} onClick={() => toggle(panel)} data-testid={testId} />
   );
 }
 

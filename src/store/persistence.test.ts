@@ -15,6 +15,7 @@ describe('parseWorkspace', () => {
         settings: DEFAULT_SETTINGS,
         dock: emptyDock(),
         layers: { items: {}, order: [] },
+        measurements: [],
       });
     }
   });
@@ -44,6 +45,21 @@ describe('parseWorkspace', () => {
   it('restores a stored dock layout', () => {
     const dock = { mapOnly: false, widthMemory: {}, columns: { left: [{ id: 'c', width: 300, panelIds: ['layers'], activePanelId: 'layers' }], right: [] } };
     expect(parseWorkspace(JSON.stringify({ dock }), 'map').dock).toEqual(dock);
+  });
+
+  it('keeps valid saved measurements and drops malformed ones', () => {
+    const ms = parseWorkspace(
+      JSON.stringify({
+        measurements: [
+          { id: 'a', name: 'Road', kind: 'distance', coordinates: [[34, 32], [35, 32]], visible: false, createdAt: 1 },
+          { id: 'b', name: 'Too short', kind: 'area', coordinates: [[34, 32], [35, 32]] },
+          { id: 'c', name: 'Bad kind', kind: 'volume', coordinates: [[34, 32], [35, 32]] },
+          'nope',
+        ],
+      }),
+      'map',
+    ).measurements;
+    expect(ms).toEqual([{ id: 'a', name: 'Road', kind: 'distance', coordinates: [[34, 32], [35, 32]], visible: false, createdAt: 1 }]);
   });
 
   it('drops an impossible view', () => {

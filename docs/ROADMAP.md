@@ -26,3 +26,6 @@ Order follows the implementation spec.
       click / F2 / menu, reorder by drag, keyboard and menu, remove), dev test-layer buttons
 - [x] M4 — Measure (distance, area; live; units; dunams) and draw (point/line/polygon → session
       Sketch layer, undo, clear) from a ruler button; terra-draw rebuilt across basemap switches
+- [x] M4 follow-up (owner) — Measurements panel with a saved, named list (not layers); Draw panel
+      that groups shapes into named drawing layers; names labelled on the map; clicking a feature
+      opens its panel and reveals it

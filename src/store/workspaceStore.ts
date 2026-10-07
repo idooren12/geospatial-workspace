@@ -6,6 +6,7 @@ import * as dock from '../layout/dockPlanner';
 import type { DockSide, DockState } from '../layout/dockPlanner';
 import { toolRegistry } from '../tools/ToolRegistry';
 import type { NewWorkspaceLayer, WorkspaceLayer } from '../layers/layerTypes';
+import type { SavedMeasurement } from '../utilities/measure/types';
 import {
   DEFAULT_SETTINGS,
   loadSessionLayers,
@@ -59,7 +60,31 @@ export interface WorkspaceState {
   renameLayer: (id: string, name: string) => void;
   /** Moves a layer to an index of `layerOrder` (0 = bottom). */
   moveLayer: (id: string, toIndex: number) => void;
+
+  // Saved measurements (their own list, not layers).
+  measurements: SavedMeasurement[];
+  saveMeasurement: (m: Omit<SavedMeasurement, 'id' | 'createdAt' | 'visible'>) => string;
+  updateMeasurement: (id: string, patch: Partial<Pick<SavedMeasurement, 'name' | 'visible'>>) => void;
+  removeMeasurement: (id: string) => void;
+
+  /** Layer new drawings go into (UI state, not persisted). */
+  drawTargetId: string | null;
+  setDrawTarget: (id: string | null) => void;
+
+  /**
+   * "Show me this": a click on a map feature asks its panel to reveal the item. `seq` changes on
+   * every request so the same item can be revealed twice. It clears itself after a moment, so a
+   * panel opened by the click still sees it on mount, but a panel opened later does not.
+   * UI state, not persisted.
+   */
+  focus: { kind: 'layer' | 'measurement'; id: string; featureId?: string; seq: number } | null;
+  reveal: (kind: 'layer' | 'measurement', id: string, featureId?: string) => void;
 }
+
+let measureSeq = 0;
+let focusSeq = 0;
+/** How long a reveal request stays live (covers the panel mounting and the 1.6 s flash). */
+const FOCUS_MS = 2000;
 
 let layerSeq = 0;
 const newLayerId = () => `L${Date.now().toString(36)}${(layerSeq++).toString(36)}`;
@@ -103,7 +128,37 @@ export function createWorkspaceStore(initial: PersistedWorkspace, session: Store
           dock: dock.emptyDock(),
           layers: {},
           layerOrder: [],
+          measurements: [],
+          drawTargetId: null,
+          focus: null,
         }),
+
+      measurements: initial.measurements,
+      saveMeasurement: (m) => {
+        const id = `M${Date.now().toString(36)}${(measureSeq++).toString(36)}`;
+        const item: SavedMeasurement = { ...m, name: m.name.trim() || id, id, visible: true, createdAt: Date.now() };
+        set((s) => ({ measurements: [...s.measurements, item] }));
+        return id;
+      },
+      updateMeasurement: (id, patch) =>
+        set((s) => ({
+          measurements: s.measurements.map((m) =>
+            m.id !== id ? m : { ...m, ...patch, name: patch.name !== undefined ? patch.name.trim() || m.name : m.name },
+          ),
+        })),
+      removeMeasurement: (id) => set((s) => ({ measurements: s.measurements.filter((m) => m.id !== id) })),
+
+      drawTargetId: null,
+      setDrawTarget: (drawTargetId) => set({ drawTargetId }),
+
+      focus: null,
+      reveal: (kind, id, featureId) => {
+        const seq = ++focusSeq;
+        set({ focus: { kind, id, seq, ...(featureId ? { featureId } : {}) } });
+        setTimeout(() => {
+          if (get().focus?.seq === seq) set({ focus: null });
+        }, FOCUS_MS);
+      },
 
       layers: { ...initial.layers.items, ...session.items },
       layerOrder: [...initial.layers.order, ...session.order.filter((id) => !(id in initial.layers.items))],
@@ -169,6 +224,7 @@ export function toPersisted(s: WorkspaceState): PersistedWorkspace {
     settings: s.settings,
     dock: s.dock,
     layers: layersBy(s, 'local'),
+    measurements: s.measurements,
   };
 }
 
@@ -190,7 +246,7 @@ export function startPersistence(
     writeSession(layersBy(store.getState(), 'session'));
   };
   const unsub = store.subscribe(
-    (s) => [s.view, s.basemapId, s.mapTheme, s.settings, s.dock, s.layers, s.layerOrder] as const,
+    (s) => [s.view, s.basemapId, s.mapTheme, s.settings, s.dock, s.layers, s.layerOrder, s.measurements] as const,
     () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(flush, delayMs);

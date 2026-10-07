@@ -63,6 +63,8 @@ export class MapService {
   private readonly sources = new Map<string, SourceSpecification>();
   /** Managed layers, bottom → top. */
   private layers: LayerSpecification[] = [];
+  /** Ids of layers kept above all others (see addOverlayLayer). */
+  private overlays = new Set<string>();
   private readonly subscriptions = new Set<Subscription>();
   private readonly styleLoadCallbacks = new Set<() => void>();
   private labelLanguage: LabelLanguage = 'he';
@@ -237,18 +239,35 @@ export class MapService {
     if (this.styleReady && this.map?.getSource(id)) this.map.removeSource(id);
   }
 
-  /** Adding an id that already exists replaces it (idempotent), never duplicates it. */
+  /**
+   * Adding an id that already exists replaces it (idempotent), never duplicates it. Without
+   * `beforeId` the layer goes on top of the workspace layers but below any overlay layers.
+   */
   addLayer(spec: LayerSpecification, beforeId?: string): void {
     assertWsId(spec.id);
+    const overlay = this.overlays.has(spec.id);
     if (this.layers.some((l) => l.id === spec.id)) this.removeLayer(spec.id);
+    if (overlay) this.overlays.add(spec.id);
     const copy = structuredClone(spec);
+    beforeId ??= overlay ? undefined : this.firstOverlay();
     const at = beforeId ? this.layers.findIndex((l) => l.id === beforeId) : -1;
     if (at >= 0) this.layers.splice(at, 0, copy);
     else this.layers.push(copy);
     if (this.styleReady && this.map) this.map.addLayer(copy, at >= 0 ? beforeId : undefined);
   }
 
+  /** Adds a layer that always stays above the ordinary workspace layers (e.g. saved annotations). */
+  addOverlayLayer(spec: LayerSpecification): void {
+    this.overlays.add(spec.id);
+    this.addLayer(spec);
+  }
+
+  private firstOverlay(): string | undefined {
+    return this.layers.find((l) => this.overlays.has(l.id))?.id;
+  }
+
   removeLayer(id: string): void {
+    this.overlays.delete(id);
     this.layers = this.layers.filter((l) => l.id !== id);
     if (this.styleReady && this.map?.getLayer(id)) this.map.removeLayer(id);
   }
@@ -281,10 +300,11 @@ export class MapService {
     }
   }
 
-  /** Moves a managed layer below `beforeId`, or to the top when omitted. */
+  /** Moves a managed layer below `beforeId`, or to the top (below overlays) when omitted. */
   moveLayer(id: string, beforeId?: string): void {
     const spec = this.findLayer(id);
     this.layers = this.layers.filter((l) => l !== spec);
+    beforeId ??= this.overlays.has(id) ? undefined : this.firstOverlay();
     const at = beforeId ? this.layers.findIndex((l) => l.id === beforeId) : -1;
     if (at >= 0) this.layers.splice(at, 0, spec);
     else this.layers.push(spec);
@@ -305,8 +325,46 @@ export class MapService {
   private restoreManaged(): void {
     const map = this.map;
     if (!map) return;
-    for (const [id, spec] of this.sources) if (!map.getSource(id)) map.addSource(id, spec);
-    for (const spec of this.layers) if (!map.getLayer(spec.id)) map.addLayer(spec);
+    // One bad layer (e.g. labels on a style without glyphs) must not stop the rest coming back.
+    for (const [id, spec] of this.sources) {
+      try {
+        if (!map.getSource(id)) map.addSource(id, spec);
+      } catch (e) {
+        console.warn(`[gws] source ${id} not restored`, e);
+      }
+    }
+    for (const spec of this.layers) {
+      try {
+        if (!map.getLayer(spec.id)) map.addLayer(spec);
+      } catch (e) {
+        console.warn(`[gws] layer ${spec.id} not restored`, e);
+      }
+    }
+  }
+
+  /**
+   * Workspace features under a screen point, topmost first. Generic: returns the MapLibre layer id
+   * (always `ws:…`) and the feature's properties, nothing else.
+   */
+  queryWorkspaceFeatures(point: { x: number; y: number }, pad = 4): { mapLayerId: string; properties: Record<string, unknown> }[] {
+    const map = this.map;
+    if (!map || !this.styleReady) return [];
+    const ids = this.layers.map((l) => l.id).filter((id) => map.getLayer(id));
+    if (ids.length === 0) return [];
+    const box: [[number, number], [number, number]] = [
+      [point.x - pad, point.y - pad],
+      [point.x + pad, point.y + pad],
+    ];
+    return map.queryRenderedFeatures(box, { layers: ids }).map((f) => ({
+      mapLayerId: f.layer.id,
+      properties: (f.properties ?? {}) as Record<string, unknown>,
+    }));
+  }
+
+  /** Cursor over the map canvas ('' restores the default). */
+  setCursor(cursor: string): void {
+    const c = this.map?.getCanvas();
+    if (c) c.style.cursor = cursor;
   }
 
   // -------------------------------------------------------------------- camera

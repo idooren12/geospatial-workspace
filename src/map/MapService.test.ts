@@ -172,6 +172,23 @@ describe('MapService', () => {
     expect(fake().layers[0]!.paint?.['fill-color']).toBe('#0f0');
   });
 
+  it('keeps overlay layers above layers added or moved later, also after a basemap switch', () => {
+    const { svc, fake } = setup();
+    fake().fire('style.load');
+    svc.addSource('ws:a', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    svc.addOverlayLayer({ id: 'ws:o:0', type: 'line', source: 'ws:a' });
+    svc.addLayer(fillLayer);
+    svc.addLayer({ id: 'ws:a:1', type: 'line', source: 'ws:a' });
+    svc.moveLayer('ws:a:0');
+    svc.addOverlayLayer({ id: 'ws:o:0', type: 'line', source: 'ws:a' }); // re-add keeps it an overlay
+    svc.addLayer({ id: 'ws:a:2', type: 'line', source: 'ws:a' });
+    expect(svc.getLayerOrder()).toEqual(['ws:a:1', 'ws:a:0', 'ws:a:2', 'ws:o:0']);
+    expect(fake().layers.map((l) => l.id)).toEqual(['ws:a:1', 'ws:a:0', 'ws:a:2', 'ws:o:0']);
+    svc.setStyle('https://example.test/dark');
+    fake().fire('style.load');
+    expect(fake().layers.map((l) => l.id)).toEqual(['ws:a:1', 'ws:a:0', 'ws:a:2', 'ws:o:0']);
+  });
+
   it('rejects ids without the workspace prefix', () => {
     const { svc } = setup();
     expect(() => svc.addLayer({ ...fillLayer, id: 'mine' })).toThrow(/ws:/);

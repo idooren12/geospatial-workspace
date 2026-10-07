@@ -111,3 +111,22 @@ LayerManager is a module-level singleton like the map.
 - E2E now serves a tiny local style (`e2e/fixtures.ts`) so the map fully loads offline; used by
   the draw tests.
 - Not in Stage 0: editing existing sketch shapes (select mode), measurement labels on the map.
+
+## 2026-10-07 — Measurements and drawings reorganised (owner feedback) — supersedes the session Sketch
+- Measurements are not layers. Their own panel (ruler button) with a temporary live measurement
+  and **Save**; saved ones are a named list (show/hide, rename, zoom to, delete) stored in the
+  workspace key (`measurements`) and drawn by `src/utilities/measure/measurementOverlay.ts` on the
+  `ws:measurements` source: dashed amber, labelled "name · value" (value follows units/language).
+- Drawing has its own panel (pencil button). Shapes go into a **target drawing layer**; many
+  shapes = one layer. The first shape creates "ציור 1" automatically; "+ שכבה חדשה…" makes a named
+  one. Drawing layers are ordinary WorkspaceLayers (`group: 'drawing'`, owner `draw`), one colour
+  each, every shape a feature `{fid, name, kind}` labelled with its name on the map.
+- **Persistence changed**: drawing layers and saved measurements are kept permanently (`local`),
+  not per tab as the old Sketch was. Reversible; asked the owner to confirm.
+- Picking (`src/layers/picking.ts`): with no draw tool active, clicking a workspace feature opens
+  the panel that lists it (Layers for layers, Measurements for measurements) and reveals the item:
+  the row expands, scrolls into view and flashes. `store.reveal()` sets a short-lived `focus`
+  (cleared after 2 s) so a panel opened by that click sees it on mount and later ones don't.
+- Label glyphs come from the basemap style. If the satellite labels overlay fails to load, the
+  satellite style has no glyphs: shapes still draw, their labels don't (MapService skips the bad
+  layer).
