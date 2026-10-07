@@ -19,11 +19,11 @@ const PALETTE = ['#ff6a3d', '#3d8bfd', '#22a06b', '#d6a400', '#9b5de5', '#e5487f
 
 const LABEL_LAYOUT = {
   'text-field': ['get', 'name'],
-  'text-font': ['Noto Sans Regular'],
-  'text-size': 12,
+  'text-font': ['Noto Sans Bold'],
+  'text-size': 13,
   'text-max-width': 12,
 } as const;
-const LABEL_PAINT = { 'text-color': '#16181b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 };
+const LABEL_PAINT = { 'text-color': '#16181b', 'text-halo-color': '#ffffff', 'text-halo-width': 2, 'text-halo-blur': 0.5 };
 
 const isPoly = ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]];
 const isLine = ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]];

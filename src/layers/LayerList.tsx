@@ -277,7 +277,7 @@ function LayerDetails({ layer, focusFid, focusSeq, onOpacity }: DetailsProps) {
       <dl className={styles.meta}>
         <dt>{t('layers.typeLabel')}</dt>
         <dd>{t(`layers.type_${layer.type}`)}</dd>
-        {layer.group && (
+        {layer.group && !drawings && (
           <>
             <dt>{t('layers.group')}</dt>
             <dd>

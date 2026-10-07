@@ -10,11 +10,11 @@ const COLOR = '#ffb020';
 
 const LABEL_LAYOUT = {
   'text-field': ['get', 'label'],
-  'text-font': ['Noto Sans Regular'],
-  'text-size': 12,
+  'text-font': ['Noto Sans Bold'],
+  'text-size': 13,
   'text-max-width': 14,
 };
-const LABEL_PAINT = { 'text-color': '#16181b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 };
+const LABEL_PAINT = { 'text-color': '#16181b', 'text-halo-color': '#ffffff', 'text-halo-width': 2, 'text-halo-blur': 0.5 };
 
 /** Saved measurements on the map: dashed amber shapes with "name · value" labels. */
 const LAYERS: LayerSpecification[] = [
