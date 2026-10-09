@@ -33,6 +33,7 @@ const sat: RasterBasemap = {
   kind: 'raster',
   imagery: { tiles: ['https://img.test/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: '© Imagery' },
   labelsStyleUrl: 'https://example.test/style',
+  licence: { providers: ['Test'], terms: ['test'], requiredCredit: ['© Imagery'] },
 };
 
 describe('buildImageryStyle', () => {
@@ -75,5 +76,24 @@ describe('BasemapManager', () => {
     expect(BasemapManager.resolve('nope').id).toBe('map');
     expect(BasemapManager.hasThemes(BasemapManager.resolve('map'))).toBe(true);
     expect(BasemapManager.hasThemes(BasemapManager.resolve('satellite'))).toBe(false);
+  });
+});
+
+describe('basemap licensing (M5 attribution audit)', () => {
+  it('every basemap declares its providers, terms and the credit that must be shown', () => {
+    for (const b of BasemapManager.list()) {
+      expect(b.licence.providers.length, b.id).toBeGreaterThan(0);
+      expect(b.licence.terms.length, b.id).toBeGreaterThan(0);
+      expect(b.licence.requiredCredit.length, b.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('imagery basemaps carry their required credit in the style source itself', async () => {
+    for (const b of BasemapManager.list()) {
+      if (b.kind !== 'raster') continue;
+      const style = (await BasemapManager.styleFor(b.id, 'light', async () => null)) as { sources: Record<string, { attribution?: string }> };
+      const credits = Object.values(style.sources).map((s) => s.attribution ?? '').join(' ');
+      for (const c of b.licence.requiredCredit) expect(credits.replace(/<[^>]+>/g, ''), b.id).toContain(c);
+    }
   });
 });

@@ -35,26 +35,41 @@ test('opens in Hebrew RTL with one map instance', async ({ page }) => {
   expect(await mapInstances(page)).toBe(1);
 });
 
-test('only the top bar is fixed; the map fills everything below it, edge to edge', async ({ page }) => {
+test('fixed top bar and status bar; the map fills everything between them, edge to edge', async ({ page }) => {
   const vp = page.viewportSize()!;
   const top = await box(page, 'header');
   const map = await box(page, 'main');
+  const status = await box(page, '[data-testid="status-bar"]');
   expect(map.x).toBe(0);
   expect(map.width).toBe(vp.width);
   expect(map.y).toBeCloseTo(top.height, 0);
-  expect(map.y + map.height).toBeCloseTo(vp.height, 0);
+  expect(status.height).toBeGreaterThanOrEqual(24); // spec §9.1: 24 px (+1 px border)
+  expect(status.height).toBeLessThanOrEqual(28);
+  expect(map.y + map.height).toBeCloseTo(status.y, 0); // the status bar is below the map, never on it
+  expect(status.y + status.height).toBeCloseTo(vp.height, 0);
   const canvas = await box(page, '.maplibregl-canvas');
   expect(Math.round(canvas.width)).toBe(vp.width); // MAP-02
+  expect(Math.round(canvas.height)).toBe(Math.round(map.height));
 });
 
-test('status readout floats inside the map', async ({ page }) => {
+test('status bar shows cursor coordinates, zoom and basemap (DoD 16)', async ({ page }) => {
   const map = await box(page, 'main');
-  const status = await box(page, '.gws-slot-status');
-  expect(status.y + status.height).toBeLessThanOrEqual(map.y + map.height);
-  expect(status.y).toBeGreaterThan(map.y);
   await page.mouse.move(map.x + map.width / 2, map.y + map.height / 2);
   await expect(page.getByTestId('cursor-coords')).toHaveText(/^\d+\.\d{5} [NS], \d+\.\d{5} [EW]$/);
   await expect(page.getByTestId('zoom-level')).toHaveText(/^\d+\.\d$/);
+  await expect(page.getByTestId('status-basemap')).toHaveText('מפה · בהיר');
+  // Leaving the map keeps the last position (dimmed) so it can be copied.
+  await page.mouse.move(5, 5);
+  await expect(page.getByTestId('cursor-coords')).toHaveAttribute('data-stale', 'true');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  const shown = await page.getByTestId('cursor-coords').textContent();
+  await page.getByTestId('status-coords').click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shown);
+  // Map Only hides the status bar (spec §4.6) and gives the row to the map.
+  await page.getByTestId('map-only').click();
+  await expect(page.getByTestId('status-bar')).toBeHidden();
+  const full = await box(page, 'main');
+  expect(full.y + full.height).toBeCloseTo(page.viewportSize()!.height, 0);
 });
 
 test('the layers button opens the Layers panel, where the basemap is chosen', async ({ page }) => {

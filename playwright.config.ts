@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 30_000,
+  // Long interaction flows (draw, reload, reopen) on software WebGL at 2560 px need headroom.
+  timeout: 60_000,
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'retain-on-failure',

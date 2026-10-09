@@ -16,6 +16,7 @@ import {
   PANEL_MIN,
   reflow,
   resizeColumn,
+  maxColumnWidth,
   sanitizeDock,
   setMapOnly,
   splitPanelToColumn,
@@ -174,6 +175,16 @@ describe('resizeColumn', () => {
     for (const id of ['a', 'b']) s = open(s, id, 'left', 1100);
     s = resizeColumn(s, s.columns.left[0]!.id, PANEL_MAX, 1100);
     expect(mapWidth(s, 1100)).toBeGreaterThanOrEqual(MAP_MIN);
+  });
+
+  it('reports the same upper bound the drag preview and keyboard use', () => {
+    let s = emptyDock();
+    for (const id of ['a', 'b']) s = open(s, id, 'left', 1100);
+    const id = s.columns.left[0]!.id;
+    const max = maxColumnWidth(s, id, 1100);
+    expect(max).toBeLessThan(PANEL_MAX);
+    expect(resizeColumn(s, id, 999, 1100).columns.left[0]!.width).toBe(max);
+    expect(maxColumnWidth(open(emptyDock(), 'a'), 'nope', W)).toBe(PANEL_MAX);
   });
 });
 

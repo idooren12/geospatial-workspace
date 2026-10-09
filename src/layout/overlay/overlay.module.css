@@ -100,33 +100,3 @@
 .check {
   color: var(--accent);
 }
-
-/* Status readout */
-.status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 8px;
-  border-radius: var(--radius);
-  background: rgb(18 20 23 / 0.78);
-  backdrop-filter: blur(4px);
-  color: var(--text);
-  font-size: var(--fs-small);
-  white-space: nowrap;
-}
-
-.coords {
-  display: inline-block;
-  min-width: 25ch;
-  text-align: start;
-}
-
-.divider {
-  width: 1px;
-  height: 12px;
-  background: rgb(255 255 255 / 0.2);
-}
-
-.error {
-  color: #ff8a8d;
-}

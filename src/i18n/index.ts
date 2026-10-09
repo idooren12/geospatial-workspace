@@ -2,7 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './en.json';
 import he from './he.json';
-import type { Language } from '../store/persistence';
+import type { Language } from '../persistence/schema';
 
 export const dirOf = (lang: Language): 'rtl' | 'ltr' => (lang === 'he' ? 'rtl' : 'ltr');
 

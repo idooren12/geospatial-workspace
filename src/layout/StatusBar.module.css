@@ -1,0 +1,78 @@
+/* Fixed status row under the workspace body (spec §9.1: 24px). Never drawn over the map. */
+.bar {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--statusbar-h);
+  padding-inline: 10px;
+  border-block-start: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.field {
+  color: var(--text);
+}
+
+.coords {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.coords:hover {
+  background: var(--bg-hover);
+}
+
+.coords [data-stale='true'] {
+  color: var(--text-dim);
+}
+
+/* Room for the widest DMS value so the bar does not jump as the cursor moves. */
+.coords > span:first-child {
+  display: inline-block;
+  min-width: 27ch;
+  text-align: start;
+}
+
+.copyIcon {
+  color: var(--text-dim);
+  flex: none;
+}
+
+.divider {
+  width: 1px;
+  height: 12px;
+  flex: none;
+  background: var(--border);
+}
+
+.error {
+  color: #ff8a8d;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* Narrow windows: the basemap name goes first; coordinates and zoom always stay. */
+@container (max-width: 520px) {
+  .optional {
+    display: none;
+  }
+}

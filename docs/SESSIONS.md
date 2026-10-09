@@ -7,3 +7,4 @@
 - 2026-10-06 — Recovered uncommitted M3 work from a previous session (rebuilt overwritten layerTypes.ts), fixed duplicate layers after refresh (single LayerManager, idempotent MapService.addLayer), stabilised keyboard-reorder E2E; committed and deployed M3.
 - 2026-10-06 — M4 measure & draw (terra-draw), session Sketch layer, offline E2E style fixture; fixed terra-draw disabling double-click zoom.
 - 2026-10-07 — Owner feedback on M4: Measurements panel with saved list, drawing layers grouping named shapes, labels on the map, click-to-reveal; draw E2E rewritten.
+- 2026-10-09 — M5 hardening per owner/planner review (29 points): status bar, attribution, persistence v2 (IndexedDB), undo/redo, confirm dialogs, selection, labels, a11y, architecture guard, visual/responsive/lifecycle E2E; report in docs/M5_REPORT.md.

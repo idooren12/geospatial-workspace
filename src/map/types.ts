@@ -47,6 +47,21 @@ interface BasemapBase {
   nameKey: string;
   /** lucide icon name used in the basemap list. */
   icon: 'map' | 'satellite' | 'mountain' | 'waves';
+  /**
+   * Licensing record (M5 attribution audit). The credit itself reaches the map through the
+   * style's sources; this says who provides it, under which terms, and what the credit must say.
+   */
+  licence: BasemapLicence;
+}
+
+export interface BasemapLicence {
+  providers: string[];
+  /** Licences / terms that apply. */
+  terms: string[];
+  /** Text that must be visible on the map (checked by tests). */
+  requiredCredit: string[];
+  /** True while production use still needs a decision (e.g. an account or key). */
+  openDecision?: string;
 }
 
 /** A vector basemap with a light and a dark rendering. */

@@ -130,3 +130,62 @@ LayerManager is a module-level singleton like the map.
 - Label glyphs come from the basemap style. If the satellite labels overlay fails to load, the
   satellite style has no glyphs: shapes still draw, their labels don't (MapService skips the bad
   layer).
+
+## 2026-10-09 — M5 hardening (owner + planner review)
+
+**Status bar (supersedes the floating readout of 2026-10-05).** A real 24 px status bar under the
+map and docks — coordinates (click copies; the last position stays, dimmed, after the cursor
+leaves the map), zoom, basemap — as the spec (§9.1) has it. The owner had asked for the map to
+reach the bottom with a floating chip; the chip covered the attribution on narrow maps, so the
+review reverted to the spec. Hidden in Map Only (spec §4.6). No map control slot named `status`
+remains: the bottom of the map belongs to the attribution (and the scale above it).
+
+**Attribution is compliance.** Never compact, never covered, wraps on narrow maps, correct per
+basemap. Esri credit updated to its current text plus "Powered by Esri". See docs/ATTRIBUTION.md;
+the Esri production licence remains an open decision.
+
+**Persistence v2.** `src/persistence/` is the only code touching storage (guarded by the
+architecture check):
+- `PersistenceAdapter` interface; `BrowserPersistenceAdapter` (prefs → localStorage
+  `gws:workspace:v2`; geometry → IndexedDB `gws`/`docs`/`geometry`, falling back to localStorage
+  `gws:geometry:v2`; session layers → sessionStorage) and an in-memory adapter for tests.
+- Schema version 2, validated field by field and item by item; stable ids; GeoJSON WGS84 only;
+  plain JSON only. v1 (one localStorage document, measurements as coordinate arrays) is migrated
+  once and then removed. Unreadable data is copied to `gws:corrupt:<key>` and defaults are used.
+- Saved measurement = `{id, name, kind, geometry (LineString | Polygon), value, unit ('m'|'m2'),
+  visible, createdAt, updatedAt}`; `value` is recomputed from geometry on load.
+- Owner rule (2026-10-09): what is saved or named (saved measurements, drawing layers) is kept
+  permanently in this browser; what is in progress or unsaved is temporary. Settings says so and
+  says nothing is synced.
+- The store holds state only. main.tsx loads before the first render; `startPersistence` auto-saves
+  (debounced 250 ms, flushed on pagehide / hidden).
+
+**Undo/redo.** One session-local command history (`src/history/history.ts`, 100 steps). Recorded:
+add/delete/rename of drawings, delete/rename/show-hide/reorder of layers, save/delete/rename/
+show-hide of saved measurements. Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, Ctrl+Y outside text fields; top-bar
+buttons with the action in the tooltip. Destructive-action model: a single item is deleted at once
+with an Undo toast; deleting a layer that holds features (or anything bigger) asks first in a dialog
+that says what goes. Workspace reset asks and cannot be undone (and clears the history).
+
+**Selection.** Clicking (or Enter on) an item in a panel, or a shape on the map, selects it; the map
+highlights it (overlay `ws:selection:*`, accent outline and label) without moving the camera.
+Clicking empty map clears it.
+
+**Labels.** Workspace labels (drawings, measurements, selection) sit on a light "pill" image fitted
+to the text, readable on light, dark and imagery basemaps. Map Core gained a generic
+`MapService.addImage` (restored after style switches). Stored drawing layers get their styles
+re-derived at startup, so style fixes reach old layers.
+
+**Architecture fixes from the review.** MapView no longer reads the store (the app passes mount
+options); the Layers panel no longer knows Draw (tools contribute `ToolDefinition.layerDetails`);
+picking and the selection overlay moved to `src/app`; Settings no longer touches storage; an
+app-level error boundary was added; dev tools are compiled out of production builds. The guard now
+also enforces: Map Core imports nothing from the app; storage only in src/persistence; src/layers
+imports no tools/utilities; src/ui imports no app modules.
+
+**Layers.** `WorkspaceLayer.metadata` — a generic, JSON-only provenance/tool field the layer
+system never interprets (drawing layers keep their colour there). No domain fields.
+
+**Kept deliberately.** The `?debug` URL flag still exposes `window.__gws` on production builds:
+it has no UI, grants nothing a user cannot already do with devtools, and is how the live site is
+verified without touching the owner's data.

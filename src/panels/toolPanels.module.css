@@ -80,3 +80,13 @@
   font-size: var(--fs-small);
   color: var(--text);
 }
+
+.layerDrawings {
+  margin-block-start: 10px;
+}
+
+.subTitle {
+  margin-block-end: 6px;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+}

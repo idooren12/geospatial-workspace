@@ -60,11 +60,22 @@ test('hide, opacity, rename, reorder and remove', async ({ page }) => {
   const order = await mapLayerOrder(page);
   const roadsId = await rows(page).nth(1).evaluate((e) => e.getAttribute('data-testid')!.slice(10));
   expect(order.indexOf(`ws:${roadsId}:0`)).toBe(0); // now drawn at the bottom
-  // Remove
+  // Remove: a layer with features asks first (and Cancel keeps it)…
   await rows(page).nth(1).getByTestId('layer-menu').click();
   await page.getByTestId('layer-remove').click();
+  await expect(page.getByRole('alertdialog')).toContainText('Roads');
+  await page.getByTestId('confirm-cancel').click();
+  await expect(rows(page)).toHaveCount(2);
+  await rows(page).nth(1).getByTestId('layer-menu').click();
+  await page.getByTestId('layer-remove').click();
+  await page.getByTestId('confirm-ok').click();
   await expect(rows(page)).toHaveCount(1);
   expect((await mapLayerOrder(page)).some((id) => id.startsWith(`ws:${roadsId}:`))).toBe(false);
+  // …and Undo puts it back where it was, on the map too.
+  await page.getByTestId('undo-toast-undo').click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(rows(page).nth(1).getByTestId('layer-name')).toHaveText('Roads');
+  expect((await mapLayerOrder(page)).indexOf(`ws:${roadsId}:0`)).toBe(0);
 });
 
 test('reorders with the keyboard on the drag handle', async ({ page }) => {

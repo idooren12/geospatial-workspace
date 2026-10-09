@@ -1,5 +1,8 @@
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import type { MapLayerStyle, WorkspaceLayer } from '../../layers/layerTypes';
+import { history } from '../../history/history';
+import i18n from '../../i18n';
+import { LABEL_PAINT, labelLayout, POINT_LABEL_OFFSET } from '../../map/labelStyle';
 import { useWorkspace } from '../../store/workspaceStore';
 
 /** Owner tag for layers the Draw panel creates. */
@@ -17,19 +20,15 @@ export interface DrawingFeature extends Feature<Geometry> {
 /** Each drawing layer gets its own colour so groups read apart on the map. */
 const PALETTE = ['#ff6a3d', '#3d8bfd', '#22a06b', '#d6a400', '#9b5de5', '#e5487f'];
 
-const LABEL_LAYOUT = {
-  'text-field': ['get', 'name'],
-  'text-font': ['Noto Sans Bold'],
-  'text-size': 13,
-  'text-max-width': 12,
-} as const;
-const LABEL_PAINT = { 'text-color': '#16181b', 'text-halo-color': '#ffffff', 'text-halo-width': 2, 'text-halo-blur': 0.5 };
-
 const isPoly = ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]];
 const isLine = ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]];
 const isPoint = ['in', ['geometry-type'], ['literal', ['Point', 'MultiPoint']]];
+const NAME = ['get', 'name'];
 
-/** Shapes plus their names drawn on the map (owner: a name nobody can see is pointless). */
+/**
+ * Shapes plus their names drawn on the map (owner: a name nobody can see is pointless). Labels sit
+ * on a light pill so they stay readable on light, dark and satellite basemaps alike.
+ */
 export function drawingStyles(color: string): MapLayerStyle[] {
   return [
     { type: 'fill', filter: isPoly, paint: { 'fill-color': color, 'fill-opacity': 0.22 } },
@@ -43,20 +42,32 @@ export function drawingStyles(color: string): MapLayerStyle[] {
       filter: isPoint,
       paint: { 'circle-color': color, 'circle-radius': 6, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
     },
-    {
-      type: 'symbol',
-      filter: isPoint,
-      layout: { ...LABEL_LAYOUT, 'text-anchor': 'top', 'text-offset': [0, 0.9] },
-      paint: LABEL_PAINT,
-    },
-    {
-      type: 'symbol',
-      filter: isLine,
-      layout: { ...LABEL_LAYOUT, 'symbol-placement': 'line-center' },
-      paint: LABEL_PAINT,
-    },
-    { type: 'symbol', filter: isPoly, layout: LABEL_LAYOUT, paint: LABEL_PAINT },
+    { type: 'symbol', filter: isPoint, layout: { ...labelLayout(NAME), ...POINT_LABEL_OFFSET }, paint: LABEL_PAINT },
+    { type: 'symbol', filter: isLine, layout: { ...labelLayout(NAME), 'symbol-placement': 'line-center' }, paint: LABEL_PAINT },
+    { type: 'symbol', filter: isPoly, layout: labelLayout(NAME), paint: LABEL_PAINT },
   ] as MapLayerStyle[];
+}
+
+/** The colour a drawing layer was given (kept in its metadata; older layers: read from the style). */
+function colorOf(layer: WorkspaceLayer): string {
+  const meta = layer.metadata?.color;
+  if (typeof meta === 'string') return meta;
+  const fill = layer.mapLayers.find((l) => l.type === 'fill') as { paint?: Record<string, unknown> } | undefined;
+  const c = fill?.paint?.['fill-color'];
+  return typeof c === 'string' ? c : PALETTE[0]!;
+}
+
+/**
+ * Stored drawing layers carry the styles of the version that created them. Re-derive them from the
+ * layer colour at startup, so label and style improvements reach existing drawings too.
+ */
+export function refreshDrawingStyles(): void {
+  const s = useWorkspace.getState();
+  for (const layer of Object.values(s.layers)) {
+    if (!isDrawingLayer(layer)) continue;
+    const color = colorOf(layer);
+    s.updateLayer(layer.id, { mapLayers: drawingStyles(color), metadata: { ...layer.metadata, source: DRAW_OWNER, color } });
+  }
 }
 
 export const isDrawingLayer = (l: WorkspaceLayer | undefined): l is WorkspaceLayer =>
@@ -96,6 +107,7 @@ export function createDrawingLayer(name: string): string {
     ownerToolId: DRAW_OWNER,
     source: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
     mapLayers: drawingStyles(color),
+    metadata: { source: DRAW_OWNER, color, createdAt: Date.now() },
   });
   s.setDrawTarget(id);
   return id;
@@ -111,9 +123,23 @@ export function currentTarget(): WorkspaceLayer | null {
 
 let fidSeq = 0;
 
+function insertFeature(layerId: string, feature: DrawingFeature, index: number): void {
+  const layer = useWorkspace.getState().layers[layerId];
+  if (!layer) return;
+  const list = featuresOf(layer).filter((f) => f.properties.fid !== feature.properties.fid);
+  list.splice(Math.max(0, Math.min(list.length, index)), 0, feature);
+  writeFeatures(layerId, list);
+}
+
+function deleteFeature(layerId: string, fid: string): void {
+  const layer = useWorkspace.getState().layers[layerId];
+  if (layer) writeFeatures(layerId, featuresOf(layer).filter((f) => f.properties.fid !== fid));
+}
+
 /**
  * Adds a finished shape to the target layer (created on first use). Every shape gets a name —
- * "<kind> <n>" — so it can be labelled on the map and found in lists.
+ * "<kind> <n>" — so it can be labelled on the map and found in lists. Undoable: undo removes the
+ * shape, and the layer too if this shape created it.
  */
 export function addDrawing(
   feature: Feature<Geometry>,
@@ -121,10 +147,12 @@ export function addDrawing(
   names: { kind: (kind: DrawingKind, n: number) => string; newLayer: (n: number) => string },
 ): { layerId: string; fid: string } {
   let target = currentTarget();
+  const created = !target;
   if (!target) {
     const id = createDrawingLayer(names.newLayer(drawingLayers().length + 1));
     target = useWorkspace.getState().layers[id]!;
   }
+  const layerId = target.id;
   const existing = featuresOf(target);
   const n = existing.filter((f) => f.properties.kind === kind).length + 1;
   const fid = `d${Date.now().toString(36)}${(fidSeq++).toString(36)}`;
@@ -133,22 +161,47 @@ export function addDrawing(
     geometry: feature.geometry,
     properties: { fid, name: names.kind(kind, n), kind },
   };
-  writeFeatures(target.id, [...existing, added]);
-  useWorkspace.getState().setDrawTarget(target.id);
-  return { layerId: target.id, fid };
+  writeFeatures(layerId, [...existing, added]);
+  useWorkspace.getState().setDrawTarget(layerId);
+
+  const s = () => useWorkspace.getState();
+  const layerAfter = s().layers[layerId]!;
+  const layerIndex = s().layerOrder.indexOf(layerId);
+  history.push({
+    label: i18n.t('history.addDrawing', { name: added.properties.name }),
+    undo: () => (created ? s().removeLayer(layerId) : deleteFeature(layerId, fid)),
+    redo: () => (created ? s().restoreLayer(layerAfter, layerIndex) : insertFeature(layerId, added, existing.length)),
+  });
+  return { layerId, fid };
 }
 
+/** Renames a shape (undoable). */
 export function renameDrawing(layerId: string, fid: string, name: string): void {
   const layer = useWorkspace.getState().layers[layerId];
-  const n = name.trim();
-  if (!layer || !n) return;
-  writeFeatures(
-    layerId,
-    featuresOf(layer).map((f) => (f.properties.fid === fid ? { ...f, properties: { ...f.properties, name: n } } : f)),
-  );
+  const after = name.trim();
+  const before = featuresOf(layer).find((f) => f.properties.fid === fid)?.properties.name;
+  if (!layer || !after || before === undefined || before === after) return;
+  const set = (n: string) => {
+    const l = useWorkspace.getState().layers[layerId];
+    if (l) writeFeatures(layerId, featuresOf(l).map((f) => (f.properties.fid === fid ? { ...f, properties: { ...f.properties, name: n } } : f)));
+  };
+  history.run({ label: i18n.t('history.rename', { name: after }), redo: () => set(after), undo: () => set(before) });
 }
 
+/** Deletes one shape at once; Undo is offered in a toast (single-item delete). */
 export function removeDrawing(layerId: string, fid: string): void {
-  const layer = useWorkspace.getState().layers[layerId];
-  if (layer) writeFeatures(layerId, featuresOf(layer).filter((f) => f.properties.fid !== fid));
+  const list = featuresOf(useWorkspace.getState().layers[layerId]);
+  const index = list.findIndex((f) => f.properties.fid === fid);
+  const feature = list[index];
+  if (!feature) return;
+  const sel = useWorkspace.getState().selection;
+  if (sel?.kind === 'feature' && sel.featureId === fid) useWorkspace.getState().select(null);
+  history.run(
+    {
+      label: i18n.t('history.deleteDrawing', { name: feature.properties.name }),
+      redo: () => deleteFeature(layerId, fid),
+      undo: () => insertFeature(layerId, feature, index),
+    },
+    { toast: true },
+  );
 }

@@ -1,4 +1,6 @@
-import { Languages, Maximize2, Minimize2, Settings } from 'lucide-react';
+import { Languages, Maximize2, Minimize2, Redo2, Settings, Undo2 } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
+import { history } from '../history/history';
 import { isActive } from './dockPlanner';
 import { useTranslation } from 'react-i18next';
 import { useWorkspace } from '../store/workspaceStore';
@@ -13,6 +15,8 @@ export function TopBar() {
   const setMapOnly = useWorkspace((s) => s.setMapOnly);
   const settingsShowing = useWorkspace((s) => !s.dock.mapOnly && isActive(s.dock, 'settings'));
   const togglePanel = useWorkspace((s) => s.togglePanel);
+  const undoLabel = useSyncExternalStore(history.subscribe, () => history.getState().undoLabel);
+  const redoLabel = useSyncExternalStore(history.subscribe, () => history.getState().redoLabel);
 
   return (
     <div className={styles.bar}>
@@ -29,6 +33,21 @@ export function TopBar() {
         </span>
       </div>
       <div className={styles.actions}>
+        <IconButton
+          label={undoLabel ? t('history.undoWhat', { what: undoLabel }) : t('history.nothingToUndo')}
+          icon={<Undo2 size={16} aria-hidden className="mirror-rtl" />}
+          aria-disabled={!undoLabel}
+          onClick={() => history.undo()}
+          data-testid="undo"
+        />
+        <IconButton
+          label={redoLabel ? t('history.redoWhat', { what: redoLabel }) : t('history.nothingToRedo')}
+          icon={<Redo2 size={16} aria-hidden className="mirror-rtl" />}
+          aria-disabled={!redoLabel}
+          onClick={() => history.redo()}
+          data-testid="redo"
+        />
+        <span className={styles.divider} aria-hidden />
         <IconButton
           label={t(mapOnly ? 'topbar.exitMapOnly' : 'topbar.mapOnly')}
           icon={mapOnly ? <Minimize2 size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}

@@ -198,6 +198,18 @@ export function closePanel(input: DockState, panelId: string): DockState {
 }
 
 /** Splitter: the new width is clamped to [PANEL_MIN, PANEL_MAX] and to what keeps the map ≥ MAP_MIN. */
+/**
+ * The widest a column may become right now: the panel maximum, or less if the map would drop
+ * below its minimum. Pointer drags and the keyboard both clamp to this (same rule as resizeColumn).
+ */
+export function maxColumnWidth(state: DockState, columnId: string, bodyWidth: number): number {
+  for (const side of SIDES) {
+    const col = state.columns[side].find((c) => c.id === columnId);
+    if (col) return clampWidth(Math.min(PANEL_MAX, Math.max(PANEL_MIN, col.width + freeSpace(state, bodyWidth))));
+  }
+  return PANEL_MAX;
+}
+
 export function resizeColumn(input: DockState, columnId: string, width: number, bodyWidth: number): DockState {
   const state = clone(input);
   for (const side of SIDES) {

@@ -6,18 +6,8 @@ import * as dock from '../layout/dockPlanner';
 import type { DockSide, DockState } from '../layout/dockPlanner';
 import { toolRegistry } from '../tools/ToolRegistry';
 import type { NewWorkspaceLayer, WorkspaceLayer } from '../layers/layerTypes';
-import type { SavedMeasurement } from '../utilities/measure/types';
-import {
-  DEFAULT_SETTINGS,
-  loadSessionLayers,
-  saveSessionLayers,
-  type StoredLayers,
-  loadWorkspace,
-  saveWorkspace,
-  SCHEMA_VERSION,
-  type PersistedWorkspace,
-  type Settings,
-} from './persistence';
+import { measure, type MeasurementKind, type SavedMeasurement } from '../utilities/measure/types';
+import { DEFAULT_SETTINGS, defaultInitialState, type InitialState, type Settings } from '../persistence/schema';
 
 export interface WorkspaceState {
   view: MapViewState | null;
@@ -45,6 +35,8 @@ export interface WorkspaceState {
   /** Drops panels whose tools are not registered (stale storage). */
   pruneDock: (known: ReadonlySet<string>) => void;
   resetWorkspace: () => void;
+  /** Replaces persisted state with what storage loaded (once, at startup). */
+  hydrate: (initial: InitialState) => void;
 
   // Workspace layers (spec §7). Synced to the map by the LayerManager.
   layers: Record<string, WorkspaceLayer>;
@@ -60,12 +52,20 @@ export interface WorkspaceState {
   renameLayer: (id: string, name: string) => void;
   /** Moves a layer to an index of `layerOrder` (0 = bottom). */
   moveLayer: (id: string, toIndex: number) => void;
+  /** Puts back a removed layer at its old stack position (undo). */
+  restoreLayer: (layer: WorkspaceLayer, index: number) => void;
 
   // Saved measurements (their own list, not layers).
   measurements: SavedMeasurement[];
-  saveMeasurement: (m: Omit<SavedMeasurement, 'id' | 'createdAt' | 'visible'>) => string;
+  saveMeasurement: (m: { name: string; kind: MeasurementKind; vertices: [number, number][] }) => string;
   updateMeasurement: (id: string, patch: Partial<Pick<SavedMeasurement, 'name' | 'visible'>>) => void;
   removeMeasurement: (id: string) => void;
+  /** Puts back a removed measurement at its old list position (undo / redo). */
+  restoreMeasurement: (m: SavedMeasurement, index: number) => void;
+
+  /** The item selected in a panel or on the map; highlighted on the map. UI state. */
+  selection: Selection | null;
+  select: (sel: Selection | null) => void;
 
   /** Layer new drawings go into (UI state, not persisted). */
   drawTargetId: string | null;
@@ -81,6 +81,11 @@ export interface WorkspaceState {
   reveal: (kind: 'layer' | 'measurement', id: string, featureId?: string) => void;
 }
 
+export type Selection =
+  | { kind: 'layer'; layerId: string }
+  | { kind: 'feature'; layerId: string; featureId: string }
+  | { kind: 'measurement'; id: string };
+
 let measureSeq = 0;
 let focusSeq = 0;
 /** How long a reveal request stays live (covers the panel mounting and the 1.6 s flash). */
@@ -91,19 +96,30 @@ const newLayerId = () => `L${Date.now().toString(36)}${(layerSeq++).toString(36)
 
 const sideOf = (panelId: string): DockSide => toolRegistry.get(panelId)?.defaultDock ?? 'left';
 
-export function createWorkspaceStore(initial: PersistedWorkspace, session: StoredLayers = { items: {}, order: [] }) {
+function persistedSlice(initial: InitialState) {
+  const { prefs, geometry, session } = initial;
+  return {
+    view: prefs.view,
+    basemapId: prefs.basemapId,
+    mapTheme: prefs.mapTheme,
+    settings: prefs.settings,
+    dock: prefs.dock,
+    measurements: geometry.measurements,
+    layers: { ...geometry.layers.items, ...session.items },
+    layerOrder: [...geometry.layers.order, ...session.order.filter((id) => !(id in geometry.layers.items))],
+  };
+}
+
+/** The store holds state only; it never reads or writes storage (see src/persistence). */
+export function createWorkspaceStore(initial: InitialState = defaultInitialState(DEFAULT_BASEMAP_ID)) {
   return create<WorkspaceState>()(
     subscribeWithSelector((set, get) => ({
-      view: initial.view,
-      basemapId: initial.basemapId,
-      mapTheme: initial.mapTheme,
-      settings: initial.settings,
+      ...persistedSlice(initial),
       setView: (view) => set({ view }),
       setBasemap: (basemapId) => set({ basemapId }),
       setMapTheme: (mapTheme) => set({ mapTheme }),
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
 
-      dock: initial.dock,
       bodyWidth: typeof window !== 'undefined' ? window.innerWidth : 1366,
       setBodyWidth: (bodyWidth) => {
         if (bodyWidth === get().bodyWidth) return;
@@ -131,22 +147,40 @@ export function createWorkspaceStore(initial: PersistedWorkspace, session: Store
           measurements: [],
           drawTargetId: null,
           focus: null,
+          selection: null,
         }),
+      hydrate: (initial) => set({ ...persistedSlice(initial), selection: null, focus: null }),
 
-      measurements: initial.measurements,
-      saveMeasurement: (m) => {
+      saveMeasurement: ({ name, kind, vertices }) => {
         const id = `M${Date.now().toString(36)}${(measureSeq++).toString(36)}`;
-        const item: SavedMeasurement = { ...m, name: m.name.trim() || id, id, visible: true, createdAt: Date.now() };
+        const now = Date.now();
+        const item: SavedMeasurement = { id, name: name.trim() || id, kind, ...measure(kind, vertices), visible: true, createdAt: now, updatedAt: now };
         set((s) => ({ measurements: [...s.measurements, item] }));
         return id;
       },
       updateMeasurement: (id, patch) =>
         set((s) => ({
           measurements: s.measurements.map((m) =>
-            m.id !== id ? m : { ...m, ...patch, name: patch.name !== undefined ? patch.name.trim() || m.name : m.name },
+            m.id !== id
+              ? m
+              : { ...m, ...patch, name: patch.name !== undefined ? patch.name.trim() || m.name : m.name, updatedAt: Date.now() },
           ),
         })),
-      removeMeasurement: (id) => set((s) => ({ measurements: s.measurements.filter((m) => m.id !== id) })),
+      removeMeasurement: (id) =>
+        set((s) => ({
+          measurements: s.measurements.filter((m) => m.id !== id),
+          selection: s.selection?.kind === 'measurement' && s.selection.id === id ? null : s.selection,
+        })),
+      restoreMeasurement: (m, index) =>
+        set((s) => {
+          if (s.measurements.some((x) => x.id === m.id)) return {};
+          const list = [...s.measurements];
+          list.splice(Math.max(0, Math.min(list.length, index)), 0, m);
+          return { measurements: list };
+        }),
+
+      selection: null,
+      select: (selection) => set({ selection }),
 
       drawTargetId: null,
       setDrawTarget: (drawTargetId) => set({ drawTargetId }),
@@ -160,8 +194,6 @@ export function createWorkspaceStore(initial: PersistedWorkspace, session: Store
         }, FOCUS_MS);
       },
 
-      layers: { ...initial.layers.items, ...session.items },
-      layerOrder: [...initial.layers.order, ...session.order.filter((id) => !(id in initial.layers.items))],
       addLayer: (input) => {
         const id = input.id && !get().layers[input.id] ? input.id : newLayerId();
         const layer: WorkspaceLayer = {
@@ -187,7 +219,20 @@ export function createWorkspaceStore(initial: PersistedWorkspace, session: Store
           const cur = s.layers[id];
           if (!cur || (!cur.removable && !opts?.force)) return {};
           const { [id]: _gone, ...rest } = s.layers;
-          return { layers: rest, layerOrder: s.layerOrder.filter((x) => x !== id) };
+          const selected = s.selection && s.selection.kind !== 'measurement' && s.selection.layerId === id;
+          return {
+            layers: rest,
+            layerOrder: s.layerOrder.filter((x) => x !== id),
+            drawTargetId: s.drawTargetId === id ? null : s.drawTargetId,
+            selection: selected ? null : s.selection,
+          };
+        }),
+      restoreLayer: (layer, index) =>
+        set((s) => {
+          if (s.layers[layer.id]) return {};
+          const order = [...s.layerOrder];
+          order.splice(Math.max(0, Math.min(order.length, index)), 0, layer.id);
+          return { layers: { ...s.layers, [layer.id]: layer }, layerOrder: order };
         }),
       setLayerVisible: (id, visible) => get().updateLayer(id, { visible }),
       setLayerOpacity: (id, opacity) => get().updateLayer(id, { opacity: Math.min(1, Math.max(0, opacity)) }),
@@ -207,59 +252,5 @@ export function createWorkspaceStore(initial: PersistedWorkspace, session: Store
   );
 }
 
-export const useWorkspace = createWorkspaceStore(loadWorkspace(DEFAULT_BASEMAP_ID), loadSessionLayers());
-
-/** Splits layers by where they are kept. */
-function layersBy(s: WorkspaceState, persist: WorkspaceLayer['persist']): StoredLayers {
-  const order = s.layerOrder.filter((id) => s.layers[id]?.persist === persist);
-  return { items: Object.fromEntries(order.map((id) => [id, s.layers[id]!])), order };
-}
-
-export function toPersisted(s: WorkspaceState): PersistedWorkspace {
-  return {
-    version: SCHEMA_VERSION,
-    view: s.view,
-    basemapId: s.basemapId,
-    mapTheme: s.mapTheme,
-    settings: s.settings,
-    dock: s.dock,
-    layers: layersBy(s, 'local'),
-    measurements: s.measurements,
-  };
-}
-
-/**
- * Debounced persistence: frequent changes (camera moves, splitter drags) coalesce into one write.
- * Pending writes are flushed when the page is hidden so nothing is lost on refresh.
- */
-export function startPersistence(
-  store: typeof useWorkspace = useWorkspace,
-  write: (ws: PersistedWorkspace) => void = saveWorkspace,
-  delayMs = 300,
-  writeSession: (layers: StoredLayers) => void = saveSessionLayers,
-): () => void {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const flush = () => {
-    if (timer) clearTimeout(timer);
-    timer = null;
-    write(toPersisted(store.getState()));
-    writeSession(layersBy(store.getState(), 'session'));
-  };
-  const unsub = store.subscribe(
-    (s) => [s.view, s.basemapId, s.mapTheme, s.settings, s.dock, s.layers, s.layerOrder, s.measurements] as const,
-    () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(flush, delayMs);
-    },
-    { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
-  );
-  const onHide = () => {
-    if (timer) flush();
-  };
-  window.addEventListener('pagehide', onHide);
-  return () => {
-    unsub();
-    window.removeEventListener('pagehide', onHide);
-    if (timer) flush();
-  };
-}
+/** The page's store. Starts from defaults; main.tsx hydrates it from storage before rendering. */
+export const useWorkspace = createWorkspaceStore();

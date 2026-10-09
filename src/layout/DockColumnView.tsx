@@ -98,7 +98,7 @@ function PanelHost({ panelId, active, tabbed }: { panelId: string; active: boole
     >
       <ErrorBoundary
         fallback={
-          <p className={styles.panelError}>
+          <p className={styles.panelError} role="alert">
             <AlertTriangle size={14} aria-hidden /> {t('dock.error')}
           </p>
         }

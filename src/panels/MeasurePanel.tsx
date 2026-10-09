@@ -10,8 +10,9 @@ import { Section } from '../ui/OptionGroup';
 import ui from '../ui/ui.module.css';
 import { formatArea, formatDistance, formatDunam } from '../utilities/measure/format';
 import { areaSquareMeters, lengthMeters, perimeterMeters } from '../utilities/measure/geodesic';
+import { measureCommands } from '../utilities/measure/measureCommands';
 import { measurementValue } from '../utilities/measure/measurementOverlay';
-import type { SavedMeasurement } from '../utilities/measure/types';
+import { verticesOf, type SavedMeasurement } from '../utilities/measure/types';
 import styles from './toolPanels.module.css';
 
 const MEASURE_TOOLS: DrawTool[] = ['distance', 'area'];
@@ -41,7 +42,6 @@ export function MeasurePanel() {
   const units = useWorkspace((s) => s.settings.units);
   const lang = useWorkspace((s) => s.settings.language);
   const saved = useWorkspace((s) => s.measurements);
-  const save = useWorkspace((s) => s.saveMeasurement);
   const [name, setName] = useState('');
 
   // Closing this panel stops a measuring tool (not a drawing tool from the Draw panel).
@@ -87,10 +87,10 @@ export function MeasurePanel() {
 
   const doSave = () => {
     if (!measurement || !canSave) return;
-    save({
+    measureCommands.save({
       name: name.trim() || defaultName,
       kind: measurement.kind,
-      coordinates: measurement.coordinates.map((p) => [p[0]!, p[1]!] as [number, number]),
+      vertices: measurement.coordinates.map((p) => [p[0]!, p[1]!] as [number, number]),
     });
     setName('');
     drawController.clearMeasurement();
@@ -162,24 +162,41 @@ function boundsOf(coords: [number, number][]): [[number, number], [number, numbe
 
 function SavedRow({ m, value }: { m: SavedMeasurement; value: string }) {
   const { t } = useTranslation();
-  const update = useWorkspace((s) => s.updateMeasurement);
-  const remove = useWorkspace((s) => s.removeMeasurement);
   const focus = useWorkspace((s) => (s.focus?.kind === 'measurement' && s.focus.id === m.id ? s.focus.seq : undefined));
+  const selected = useWorkspace((s) => s.selection?.kind === 'measurement' && s.selection.id === m.id);
+  const select = useWorkspace((s) => s.select);
   const ref = useReveal(focus !== undefined, focus);
+  const toggle = () => select(selected ? null : { kind: 'measurement', id: m.id });
   return (
-    <li ref={ref} className={ui.item} data-hidden={!m.visible} data-testid={`saved-${m.id}`}>
+    <li
+      ref={ref}
+      className={ui.item}
+      data-hidden={!m.visible}
+      aria-current={selected || undefined}
+      data-testid={`saved-${m.id}`}
+      onClick={(e) => {
+        if (!(e.target as HTMLElement).closest('button, input')) toggle();
+      }}
+    >
       <button
         type="button"
         className={ui.iconBtn}
         aria-pressed={m.visible}
         aria-label={t(m.visible ? 'layers.hide' : 'layers.show', { name: m.name })}
         title={t(m.visible ? 'layers.hide' : 'layers.show', { name: m.name })}
-        onClick={() => update(m.id, { visible: !m.visible })}
+        onClick={() => measureCommands.setVisible(m.id, !m.visible)}
         data-testid="saved-visibility"
       >
         {m.visible ? <Eye size={14} aria-hidden /> : <EyeOff size={14} aria-hidden />}
       </button>
-      <EditableName value={m.name} onRename={(name) => update(m.id, { name })} testId="saved-name" />
+      <EditableName
+        value={m.name}
+        onRename={(name) => measureCommands.rename(m.id, name)}
+        onActivate={toggle}
+        activateLabel={t('common.select', { name: m.name })}
+        pressed={selected}
+        testId="saved-name"
+      />
       <span className={ui.itemValue} data-testid="saved-value">
         {value}
       </span>
@@ -188,7 +205,7 @@ function SavedRow({ m, value }: { m: SavedMeasurement; value: string }) {
         className={ui.iconBtn}
         aria-label={t('common.zoomTo', { name: m.name })}
         title={t('common.zoomTo', { name: m.name })}
-        onClick={() => mapService.fitBounds(boundsOf(m.coordinates), { padding: 80, maxZoom: 16 })}
+        onClick={() => mapService.fitBounds(boundsOf(verticesOf(m.geometry)), { padding: 80, maxZoom: 16 })}
       >
         <Focus size={14} aria-hidden />
       </button>
@@ -197,7 +214,7 @@ function SavedRow({ m, value }: { m: SavedMeasurement; value: string }) {
         className={ui.iconBtn}
         aria-label={t('common.delete', { name: m.name })}
         title={t('common.delete', { name: m.name })}
-        onClick={() => remove(m.id)}
+        onClick={() => measureCommands.remove(m.id)}
         data-testid="saved-remove"
       >
         <Trash2 size={14} aria-hidden />

@@ -20,6 +20,11 @@ export interface ToolDefinition {
   rail?: boolean;
   /** Registered only in development builds. */
   devOnly?: boolean;
+  /**
+   * Extra content for the Layers panel's details of layers this tool owns (e.g. the shapes of a
+   * drawing layer). Keeps the Layers panel generic: it never knows what a tool's layers contain.
+   */
+  layerDetails?: ComponentType<{ layer: WorkspaceLayer }>;
 }
 
 export interface ToolPanelProps {

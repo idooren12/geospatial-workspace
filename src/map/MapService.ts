@@ -27,9 +27,10 @@ export type MapFactory = (options: MapOptions) => MlMap;
 
 /**
  * Named places on the map where the app can render its own floating UI (via React portals).
- * `tools` sits under the navigation control; `status` sits in the opposite bottom corner.
+ * `tools` sits under the navigation control. The bottom of the map belongs to the scale and the
+ * attribution, which nothing else may cover (the status bar is outside the map).
  */
-export type ControlSlot = 'tools' | 'status';
+export type ControlSlot = 'tools';
 
 export interface MountOptions {
   style: StyleInput;
@@ -63,6 +64,8 @@ export class MapService {
   private readonly sources = new Map<string, SourceSpecification>();
   /** Managed layers, bottom → top. */
   private layers: LayerSpecification[] = [];
+  /** Images used by workspace layers (e.g. label backgrounds); re-added after style changes. */
+  private readonly images = new Map<string, { width: number; height: number; data: Uint8Array; options: object }>();
   /** Ids of layers kept above all others (see addOverlayLayer). */
   private overlays = new Set<string>();
   private readonly subscriptions = new Set<Subscription>();
@@ -81,6 +84,11 @@ export class MapService {
 
   /** Number of MapLibre instances ever created. Must stay 1 for the life of the page. */
   instanceCount = 0;
+
+  /** Live map-event subscriptions (diagnostics: reopening tools must not grow this). */
+  get subscriptionCount(): number {
+    return this.subscriptions.size + this.styleLoadCallbacks.size;
+  }
 
   private readonly factory: MapFactory;
 
@@ -114,7 +122,8 @@ export class MapService {
 
     this.nav = new NavigationControl({ visualizePitch: true });
     this.scale = new ScaleControl({ unit: opts.scaleUnit, maxWidth: 120 });
-    this.attribution = new AttributionControl({ compact: true });
+    // Never compact: the provider credits stay visible and clickable at every map width.
+    this.attribution = new AttributionControl({ compact: false });
     this.placeControls();
 
     map.on('style.load', this.handleStyleLoad);
@@ -322,9 +331,29 @@ export class MapService {
     return spec;
   }
 
+  /**
+   * Registers a raw RGBA image for symbol layers (`icon-image`). Recorded, so it comes back after a
+   * basemap switch. Options are MapLibre's (pixelRatio, stretchX/Y, content). Idempotent.
+   */
+  addImage(id: string, image: { width: number; height: number; data: Uint8Array }, options: object = {}): void {
+    assertWsId(id);
+    this.images.set(id, { ...image, options });
+    const map = this.map;
+    if (!map || !this.styleReady) return;
+    if (map.hasImage(id)) map.removeImage(id);
+    map.addImage(id, image, options);
+  }
+
   private restoreManaged(): void {
     const map = this.map;
     if (!map) return;
+    for (const [id, img] of this.images) {
+      try {
+        if (!map.hasImage(id)) map.addImage(id, { width: img.width, height: img.height, data: img.data }, img.options);
+      } catch (e) {
+        console.warn(`[gws] image ${id} not restored`, e);
+      }
+    }
     // One bad layer (e.g. labels on a style without glyphs) must not stop the rest coming back.
     for (const [id, spec] of this.sources) {
       try {
@@ -438,25 +467,23 @@ export class MapService {
   }
 
   /**
-   * (Re)places every control. Top corner: navigation, then app tools below it.
-   * Bottom corners stack upwards in add order: the status slot sits lowest, the scale above it;
-   * attribution goes to the bottom corner on the navigation side.
+   * (Re)places every control. Top corner: navigation, then app tools below it. Bottom corner on
+   * the same side: attribution at the very bottom (it may wrap across the whole map width) with
+   * the scale stacked above it, so the two can never overlap; the other bottom corner stays empty.
    */
   private placeControls(): void {
     const map = this.map;
     if (!map) return;
     const top: ControlPosition = this.controlCorner;
-    const sameBottom: ControlPosition = top === 'top-right' ? 'bottom-right' : 'bottom-left';
-    const otherBottom: ControlPosition = top === 'top-right' ? 'bottom-left' : 'bottom-right';
+    const bottom: ControlPosition = top === 'top-right' ? 'bottom-right' : 'bottom-left';
     const tools = this.slotControl('tools');
-    const status = this.slotControl('status');
-    const all = [this.nav, tools, status, this.scale, this.attribution];
+    const all = [this.nav, tools, this.scale, this.attribution];
     for (const c of all) if (c && map.hasControl(c)) map.removeControl(c);
     if (this.nav) map.addControl(this.nav, top);
     map.addControl(tools, top);
-    map.addControl(status, otherBottom);
-    if (this.scale) map.addControl(this.scale, otherBottom);
-    if (this.attribution) map.addControl(this.attribution, sameBottom);
+    // Bottom corners stack upwards in add order: first added sits lowest.
+    if (this.attribution) map.addControl(this.attribution, bottom);
+    if (this.scale) map.addControl(this.scale, bottom);
   }
 
   private slotControl(name: ControlSlot): IControl {

@@ -2,7 +2,10 @@
   "app": {
     "name": "Geospatial Workspace",
     "untitled": "Untitled",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "error": "Something went wrong in the workspace.",
+    "errorHint": "Saved data is not affected. Reloading the page usually helps.",
+    "reload": "Reload"
   },
   "topbar": {
     "switchLanguage": "החלפה לעברית",
@@ -15,7 +18,13 @@
     "cursor": "Cursor position",
     "zoom": "Zoom",
     "noCursor": "—",
-    "basemapError": "Basemap failed to load"
+    "basemapError": "Basemap failed to load",
+    "label": "Status bar",
+    "copy": "Copy coordinates",
+    "copied": "Copied",
+    "lastCursor": "Last cursor position — click to copy",
+    "basemap": "Basemap",
+    "themeOf": "{{basemap}} · {{theme}}"
   },
   "basemap": {
     "map": "Map",
@@ -43,7 +52,8 @@
     "moveToOther": "Move to other side",
     "split": "Split into own column",
     "resize": "Resize panel",
-    "error": "This tool hit an error and stopped. The rest of the workspace keeps working."
+    "error": "This tool hit an error and stopped. The rest of the workspace keeps working.",
+    "widthPx": "{{width}} px wide"
   },
   "layers": {
     "basemap": "Basemap",
@@ -71,7 +81,8 @@
     "type_raster": "Raster",
     "type_custom": "Custom",
     "topHint": "The top layer draws above the others.",
-    "drawings": "Drawings"
+    "drawings": "Drawings",
+    "select": "Select {{name}} and highlight it on the map"
   },
   "settings": {
     "language": "Language",
@@ -83,8 +94,11 @@
     "decimal": "Decimal degrees",
     "dms": "Degrees, minutes, seconds",
     "reset": "Reset workspace",
-    "resetConfirm": "Click again to reset everything",
-    "resetHint": "Restores map, panels and settings to defaults."
+    "resetHint": "Restores map, panels and settings to defaults, and deletes drawing layers and saved measurements.",
+    "storage": "Storage",
+    "storage_indexeddb": "Drawing layers and saved measurements are saved automatically in this browser only (IndexedDB). Nothing is synced to the cloud or other devices.",
+    "storage_localStorage": "Drawing layers and saved measurements are saved automatically in this browser only (localStorage). Nothing is synced to the cloud or other devices.",
+    "storage_memory": "This browser blocks storage: changes will be lost when the page closes."
   },
   "debug": {
     "mapInstances": "Map instances",
@@ -113,7 +127,6 @@
     "clear": "Clear measurement",
     "result": "Result",
     "perimeter": "Perimeter",
-    "points": "{{count}} points",
     "live": "while drawing",
     "empty": "Pick distance or area, then click on the map.",
     "hintPoint": "Click the map to add a point.",
@@ -124,12 +137,15 @@
     "saveName": "Measurement name",
     "defaultName": "Measurement {{n}}",
     "saved": "Saved measurements",
-    "savedEmpty": "No saved measurements. When you finish measuring, you can save it with a name."
+    "savedEmpty": "No saved measurements. When you finish measuring, you can save it with a name.",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points"
   },
   "common": {
     "nameInput": "Name",
     "zoomTo": "Zoom to {{name}}",
-    "delete": "Delete {{name}}"
+    "delete": "Delete {{name}}",
+    "select": "Select {{name}} and highlight it on the map"
   },
   "draw": {
     "layer": "Drawing layer",
@@ -144,5 +160,36 @@
     "kind_point": "Point {{n}}",
     "kind_line": "Line {{n}}",
     "kind_polygon": "Polygon {{n}}"
+  },
+  "history": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoWhat": "Undo: {{what}} (Ctrl+Z)",
+    "redoWhat": "Redo: {{what}} (Ctrl+Shift+Z)",
+    "nothingToUndo": "Nothing to undo",
+    "nothingToRedo": "Nothing to redo",
+    "deleteLayer": "Delete layer “{{name}}”",
+    "deleteDrawing": "Delete “{{name}}”",
+    "deleteMeasurement": "Delete measurement “{{name}}”",
+    "rename": "Rename to “{{name}}”",
+    "show": "Show “{{name}}”",
+    "hide": "Hide “{{name}}”",
+    "move": "Move “{{name}}”",
+    "addDrawing": "Add “{{name}}”",
+    "saveMeasurement": "Save measurement “{{name}}”",
+    "toastUndo": "Undo",
+    "dismiss": "Dismiss"
+  },
+  "confirm": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteLayerTitle": "Delete layer “{{name}}”?",
+    "deleteLayerBody_one": "The layer and its {{count}} feature will be deleted.",
+    "deleteLayerBody_other": "The layer and its {{count}} features will be deleted.",
+    "deleteLayerOne": "The layer and its feature will be deleted.",
+    "undoHint": "You can bring it back with Undo (Ctrl+Z) until the page is reloaded.",
+    "resetTitle": "Reset the workspace?",
+    "resetBody": "All panels, settings, drawing layers and saved measurements will be removed from this browser. This cannot be undone.",
+    "reset": "Reset"
   }
 }

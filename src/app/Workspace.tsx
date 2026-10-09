@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { applyDocumentLanguage, dirOf } from '../i18n';
 import i18n from '../i18n';
 import { MapControls } from '../layout/overlay/MapControls';
-import { MapStatus } from '../layout/overlay/MapStatus';
+import { StatusBar } from '../layout/StatusBar';
+import { UndoToast } from '../layout/UndoToast';
 import { DockArea } from '../layout/DockArea';
 import { TopBar } from '../layout/TopBar';
 import { toolRegistry } from '../tools/ToolRegistry';
@@ -10,19 +12,24 @@ import { LayerManager } from '../layers/LayerManager';
 import { WorkspaceLayout } from '../layout/WorkspaceLayout';
 import { BasemapManager } from '../map/BasemapManager';
 import { drawController } from '../map/draw/DrawController';
-import { mapService } from '../map/MapService';
-import { addDrawing, type DrawingKind } from '../utilities/draw/drawingLayers';
+import { mapService, type MountOptions } from '../map/MapService';
+import { INITIAL_BOUNDS, INITIAL_BOUNDS_PADDING } from '../map/mapConfig';
+import { addDrawing, refreshDrawingStyles, type DrawingKind } from '../utilities/draw/drawingLayers';
+import { LABEL_IMAGES } from '../map/labelStyle';
+import { history } from '../history/history';
 import { syncMeasurements } from '../utilities/measure/measurementOverlay';
-import { wirePicking } from '../layers/picking';
+import { wirePicking } from './picking';
+import { syncSelection } from './selectionOverlay';
 import { MapView } from '../map/MapView';
-import { startPersistence, useWorkspace } from '../store/workspaceStore';
+import { persistence, startPersistence } from '../persistence';
+import { useWorkspace } from '../store/workspaceStore';
 
 /** One per page, like the map: effect re-runs (React StrictMode) must not re-add layers. */
 const layerManager = new LayerManager(mapService);
 
 /** Wires store ⇄ map ⇄ document. Contains no domain logic. */
 function useWorkspaceWiring() {
-  useEffect(() => startPersistence(), []);
+  useEffect(() => startPersistence(useWorkspace, persistence), []);
 
   // Camera → store (persisted, debounced).
   useEffect(
@@ -36,6 +43,9 @@ function useWorkspaceWiring() {
 
   // Workspace layers → map, by diff. Runs once now (restored layers) and on every change.
   useEffect(() => {
+    // Label backgrounds used by drawing, measurement and selection labels.
+    for (const [id, img] of Object.entries(LABEL_IMAGES)) mapService.addImage(id, img, img.options);
+    refreshDrawingStyles();
     const manager = layerManager;
     const run = () => {
       const s = useWorkspace.getState();
@@ -51,17 +61,36 @@ function useWorkspaceWiring() {
 
   // Drawing engine: attach once the map exists; finished shapes go to the Sketch layer.
   useEffect(() => {
+    let unwire: (() => void) | null = null;
+    let alive = true;
     void mapService.whenMounted().then(() => {
+      if (!alive) return;
       drawController.wire();
-      wirePicking();
+      unwire = wirePicking();
     });
-    return drawController.onSketch((f) => {
+    const offSketch = drawController.onSketch((f) => {
       const kind: DrawingKind = f.geometry.type === 'Point' ? 'point' : f.geometry.type === 'Polygon' ? 'polygon' : 'line';
       addDrawing(f, kind, {
         kind: (k, n) => i18n.t(`draw.kind_${k}`, { n }),
         newLayer: (n) => i18n.t('draw.defaultLayer', { n }),
       });
     });
+    return () => {
+      alive = false;
+      unwire?.();
+      offSketch();
+    };
+  }, []);
+
+  // Selection → highlight on the map (also follows edits to the selected item).
+  useEffect(() => {
+    const run = () => syncSelection(useWorkspace.getState());
+    run();
+    return useWorkspace.subscribe(
+      (s) => [s.selection, s.layers, s.measurements, s.settings.units, s.settings.language] as const,
+      run,
+      { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
+    );
   }, []);
 
   // Saved measurements → map (labels follow units and language).
@@ -119,12 +148,28 @@ function exposeLayersForDebug() {
   };
 }
 
-/** Ctrl+Shift+M toggles Map Only; Escape leaves it (unless a menu/popover took the key). */
+/** Typing in a field keeps the browser's own undo; the workspace history must not steal it. */
+function isTextEntry(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  return el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'button'].includes((el as HTMLInputElement).type));
+}
+
+/**
+ * Ctrl+Shift+M toggles Map Only; Escape leaves it (unless a menu/popover took the key).
+ * Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z or Ctrl+Y redoes (outside text fields).
+ */
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = useWorkspace.getState();
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+      if (mod && !e.altKey && (key === 'z' || key === 'y') && !isTextEntry(e.target)) {
+        e.preventDefault();
+        if (key === 'y' || e.shiftKey) history.redo();
+        else history.undo();
+      } else if (mod && e.shiftKey && key === 'm') {
         e.preventDefault();
         s.setMapOnly(!s.dock.mapOnly);
       } else if (e.key === 'Escape' && s.dock.mapOnly && !e.defaultPrevented) {
@@ -136,16 +181,32 @@ function useShortcuts() {
   }, []);
 }
 
+/** Mount options from the stored workspace; imagery styles are assembled asynchronously. */
+async function mapMountOptions(): Promise<MountOptions> {
+  const s = useWorkspace.getState();
+  return {
+    style: await BasemapManager.styleFor(s.basemapId, s.mapTheme),
+    labelPaint: BasemapManager.labelPaintFor(s.basemapId, s.mapTheme),
+    view: s.view,
+    fallbackBounds: INITIAL_BOUNDS,
+    fallbackPadding: INITIAL_BOUNDS_PADDING,
+    labelLanguage: s.settings.language,
+    scaleUnit: s.settings.units,
+    controlCorner: dirOf(s.settings.language) === 'rtl' ? 'top-left' : 'top-right',
+  };
+}
+
 export function Workspace() {
   useWorkspaceWiring();
   useShortcuts();
   // Stored layouts may name tools that no longer exist.
   useEffect(() => useWorkspace.getState().pruneDock(toolRegistry.ids()), []);
+  const mapOnly = useWorkspace((s) => s.dock.mapOnly);
+  const { t } = useTranslation();
   return (
     <>
-      <WorkspaceLayout topBar={<TopBar />} body={<DockArea map={<MapView />} />} />
+      <WorkspaceLayout topBar={<TopBar />} body={<DockArea map={<MapView label={t('map.label')} mountOptions={mapMountOptions} />} mapOverlay={<UndoToast />} />} statusBar={<StatusBar />} mapOnly={mapOnly} />
       <MapControls />
-      <MapStatus />
     </>
   );
 }

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { HardDrive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { clearWorkspace } from '../store/persistence';
+import { history } from '../history/history';
+import { persistence } from '../persistence';
 import { useWorkspace } from '../store/workspaceStore';
+import { confirmAction } from '../ui/confirm';
 import { OptionGroup, Section } from '../ui/OptionGroup';
 import styles from '../ui/ui.module.css';
 
@@ -10,14 +12,20 @@ export function SettingsPanel() {
   const settings = useWorkspace((s) => s.settings);
   const update = useWorkspace((s) => s.updateSettings);
   const reset = useWorkspace((s) => s.resetWorkspace);
-  const [armed, setArmed] = useState(false);
 
-  // A reset needs a second click within a few seconds; no browser confirm dialogs.
-  useEffect(() => {
-    if (!armed) return;
-    const timer = setTimeout(() => setArmed(false), 4000);
-    return () => clearTimeout(timer);
-  }, [armed]);
+  // Removes everything at once and cannot be undone, so it is confirmed in a dialog first.
+  const askReset = async () => {
+    const ok = await confirmAction({
+      title: t('confirm.resetTitle'),
+      description: t('confirm.resetBody'),
+      confirmLabel: t('confirm.reset'),
+      cancelLabel: t('confirm.cancel'),
+      danger: true,
+    });
+    if (!ok) return;
+    reset();
+    history.clear();
+  };
 
   return (
     <>
@@ -53,20 +61,14 @@ export function SettingsPanel() {
         ]}
         testId="settings-coords"
       />
+      <Section title={t('settings.storage')}>
+        <p className={styles.hint} data-testid="settings-storage">
+          <HardDrive size={12} aria-hidden /> {t(`settings.storage_${persistence.geometryBackend}`)}
+        </p>
+      </Section>
       <Section title={t('settings.reset')}>
-        <button
-          type="button"
-          className={styles.dangerBtn}
-          data-armed={armed}
-          onClick={() => {
-            if (!armed) return setArmed(true);
-            clearWorkspace();
-            reset();
-            setArmed(false);
-          }}
-          data-testid="settings-reset"
-        >
-          {armed ? t('settings.resetConfirm') : t('settings.reset')}
+        <button type="button" className={styles.dangerBtn} onClick={() => void askReset()} data-testid="settings-reset">
+          {t('settings.reset')}
         </button>
         <p className={styles.hint}>{t('settings.resetHint')}</p>
       </Section>

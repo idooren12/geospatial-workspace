@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useWorkspace } from '../store/workspaceStore';
-import { SPLITTER, type DockColumn, type DockState } from './dockPlanner';
+import { maxColumnWidth, SPLITTER, type DockColumn, type DockState } from './dockPlanner';
 import { DockColumnView } from './DockColumnView';
 import { Rail } from './Rail';
 import { Splitter } from './Splitter';
@@ -20,12 +20,13 @@ function template(dock: DockState, override?: { id: string; width: number }): st
  * the real map container size; MapService's ResizeObserver resizes MapLibre (MAP-02). The map
  * element is a stable child, so nothing here remounts it.
  */
-export function DockArea({ map }: { map: ReactNode }) {
+export function DockArea({ map, mapOverlay }: { map: ReactNode; mapOverlay?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const dock = useWorkspace((s) => s.dock);
   const dir = useWorkspace((s) => s.settings.language) === 'he' ? 'rtl' : 'ltr';
   const setBodyWidth = useWorkspace((s) => s.setBodyWidth);
   const resize = useWorkspace((s) => s.resizeColumn);
+  const bodyWidth = useWorkspace((s) => s.bodyWidth);
 
   useEffect(() => {
     const el = ref.current;
@@ -51,14 +52,16 @@ export function DockArea({ map }: { map: ReactNode }) {
         <Splitter
           side={side}
           width={col.width}
+          max={maxColumnWidth(dock, col.id, bodyWidth)}
           dir={dir}
+          controls={`dock-column-${col.id}`}
           onPreview={(w) => preview(col.id, w)}
           onCommit={(w) => resize(col.id, w)}
         />
       </div>
     );
     const view = (
-      <div className={styles.columnCell} hidden={dock.mapOnly}>
+      <div className={styles.columnCell} hidden={dock.mapOnly} id={`dock-column-${col.id}`}>
         <DockColumnView column={col} />
       </div>
     );
@@ -75,6 +78,7 @@ export function DockArea({ map }: { map: ReactNode }) {
       {dock.columns.left.map((c) => columnFor(c, 'left'))}
       <div className={styles.mapCell} data-testid="map-cell">
         {map}
+        {mapOverlay}
         <Rail side="left" />
         <Rail side="right" />
       </div>

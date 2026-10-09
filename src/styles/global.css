@@ -66,6 +66,26 @@ button {
 .maplibregl-ctrl-attrib {
   direction: ltr;
 }
+/* Attribution is a licence requirement: always fully shown, readable on any basemap, and allowed
+   to wrap over the whole map width rather than being cut off on a narrow map. */
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  /* Shrink-to-fit up to the whole map width (minus the control margins), then wrap. */
+  max-width: 100%;
+  width: max-content;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+  max-width: calc(100cqw - 20px);
+  background-color: rgb(255 255 255 / 0.85);
+  color: #1f2328;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.maplibregl-ctrl-attrib a {
+  color: #0b4f9c;
+}
 .maplibregl-ctrl-scale {
   background: rgb(18 20 23 / 0.75);
   border-color: var(--text-dim);
@@ -84,4 +104,9 @@ button {
   border-radius: var(--radius);
   z-index: 50;
   max-width: 260px;
+}
+
+/* Direction-bearing icons (undo/redo arrows) mirror in RTL; most icons do not. */
+:dir(rtl) .mirror-rtl {
+  transform: scaleX(-1);
 }

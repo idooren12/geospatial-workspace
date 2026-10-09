@@ -2,4 +2,6 @@
   position: absolute;
   inset: 0;
   background: var(--bg-0);
+  /* Lets map controls size against the map width (attribution wrapping). */
+  container-type: size;
 }

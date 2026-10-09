@@ -9,10 +9,14 @@ interface Props {
   /** Start editing from outside (e.g. a menu item). */
   editing?: boolean;
   onEditingChange?: (editing: boolean) => void;
+  /** Enter / Space on the name (e.g. select the item). Makes the name a toggle button. */
+  onActivate?: () => void;
+  activateLabel?: string;
+  pressed?: boolean;
 }
 
 /** A name that turns into a text field on double click or F2; Enter saves, Escape cancels. */
-export function EditableName({ value, onRename, testId, editing: forced, onEditingChange }: Props) {
+export function EditableName({ value, onRename, testId, editing: forced, onEditingChange, onActivate, activateLabel, pressed }: Props) {
   const { t } = useTranslation();
   const [own, setOwn] = useState(false);
   const editing = forced ?? own;
@@ -24,11 +28,15 @@ export function EditableName({ value, onRename, testId, editing: forced, onEditi
         className={styles.editable}
         title={value}
         tabIndex={0}
+        {...(onActivate ? { role: 'button', 'aria-pressed': !!pressed, 'aria-label': activateLabel } : {})}
         onDoubleClick={() => setEditing(true)}
         onKeyDown={(e) => {
           if (e.key === 'F2') {
             e.preventDefault();
             setEditing(true);
+          } else if (onActivate && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onActivate();
           }
         }}
         data-testid={testId}

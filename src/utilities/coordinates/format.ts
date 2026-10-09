@@ -1,4 +1,4 @@
-import type { CoordFormat } from '../../store/persistence';
+import type { CoordFormat } from '../../persistence/schema';
 
 /** `32.08612 N, 34.78135 E` — 5 decimals ≈ 1.1 m (UTL-01). */
 export function formatDecimal(lng: number, lat: number, decimals = 5): string {

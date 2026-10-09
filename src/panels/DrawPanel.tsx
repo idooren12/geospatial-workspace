@@ -1,21 +1,12 @@
-import { Focus, Hexagon, MapPin, Plus, Spline, Trash2 } from 'lucide-react';
+import { Hexagon, MapPin, Plus, Spline } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { drawController, type DrawTool } from '../map/draw/DrawController';
-import { mapService } from '../map/MapService';
 import { useWorkspace } from '../store/workspaceStore';
-import { EditableName } from '../ui/EditableName';
-import { useReveal } from '../ui/useReveal';
 import { Section } from '../ui/OptionGroup';
 import ui from '../ui/ui.module.css';
-import {
-  createDrawingLayer,
-  featuresOf,
-  isDrawingLayer,
-  removeDrawing,
-  renameDrawing,
-  type DrawingFeature,
-} from '../utilities/draw/drawingLayers';
+import { createDrawingLayer, featuresOf, isDrawingLayer } from '../utilities/draw/drawingLayers';
+import { DrawingList } from './DrawingList';
 import { ToolButton } from './MeasurePanel';
 import styles from './toolPanels.module.css';
 
@@ -119,11 +110,7 @@ export function DrawPanel() {
               {t('draw.empty')}
             </p>
           ) : (
-            <ul className={ui.items} data-testid="drawing-list">
-              {[...features].reverse().map((f) => (
-                <DrawingRow key={f.properties.fid} layerId={target.id} f={f} />
-              ))}
-            </ul>
+            <DrawingList layer={target} testId="drawing-list" newestFirst />
           )}
         </Section>
       )}
@@ -134,61 +121,5 @@ export function DrawPanel() {
         </p>
       )}
     </>
-  );
-}
-
-const KIND_ICON = { point: MapPin, line: Spline, polygon: Hexagon } as const;
-
-function featureBounds(f: DrawingFeature): [[number, number], [number, number]] | null {
-  const pts: number[][] = [];
-  const walk = (c: unknown): void => {
-    if (Array.isArray(c) && typeof c[0] === 'number') pts.push(c as number[]);
-    else if (Array.isArray(c)) c.forEach(walk);
-  };
-  walk((f.geometry as { coordinates?: unknown }).coordinates);
-  if (pts.length === 0) return null;
-  const xs = pts.map((p) => p[0]!);
-  const ys = pts.map((p) => p[1]!);
-  return [
-    [Math.min(...xs), Math.min(...ys)],
-    [Math.max(...xs), Math.max(...ys)],
-  ];
-}
-
-function DrawingRow({ layerId, f }: { layerId: string; f: DrawingFeature }) {
-  const { t } = useTranslation();
-  const Icon = KIND_ICON[f.properties.kind];
-  const focus = useWorkspace((s) =>
-    s.focus?.kind === 'layer' && s.focus.id === layerId && s.focus.featureId === f.properties.fid ? s.focus.seq : undefined,
-  );
-  const ref = useReveal(focus !== undefined, focus);
-  const name = f.properties.name;
-  return (
-    <li ref={ref} className={ui.item} data-testid={`drawing-${f.properties.fid}`}>
-      <Icon size={14} aria-hidden className={ui.itemValue} />
-      <EditableName value={name} onRename={(n) => renameDrawing(layerId, f.properties.fid, n)} testId="drawing-name" />
-      <button
-        type="button"
-        className={ui.iconBtn}
-        aria-label={t('common.zoomTo', { name })}
-        title={t('common.zoomTo', { name })}
-        onClick={() => {
-          const b = featureBounds(f);
-          if (b) mapService.fitBounds(b, { padding: 80, maxZoom: 16 });
-        }}
-      >
-        <Focus size={14} aria-hidden />
-      </button>
-      <button
-        type="button"
-        className={ui.iconBtn}
-        aria-label={t('common.delete', { name })}
-        title={t('common.delete', { name })}
-        onClick={() => removeDrawing(layerId, f.properties.fid)}
-        data-testid="drawing-remove"
-      >
-        <Trash2 size={14} aria-hidden />
-      </button>
-    </li>
   );
 }

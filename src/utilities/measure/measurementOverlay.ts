@@ -1,20 +1,12 @@
 import type { Feature, FeatureCollection } from 'geojson';
+import { LABEL_PAINT, labelLayout } from '../../map/labelStyle';
 import { mapService } from '../../map/MapService';
 import type { LayerSpecification, ScaleUnit } from '../../map/types';
 import { formatArea, formatDistance, type Lang } from './format';
-import { areaSquareMeters, lengthMeters } from './geodesic';
 import type { SavedMeasurement } from './types';
 
 export const MEASURE_SOURCE = 'ws:measurements';
 const COLOR = '#ffb020';
-
-const LABEL_LAYOUT = {
-  'text-field': ['get', 'label'],
-  'text-font': ['Noto Sans Bold'],
-  'text-size': 13,
-  'text-max-width': 14,
-};
-const LABEL_PAINT = { 'text-color': '#16181b', 'text-halo-color': '#ffffff', 'text-halo-width': 2, 'text-halo-blur': 0.5 };
 
 /** Saved measurements on the map: dashed amber shapes with "name · value" labels. */
 const LAYERS: LayerSpecification[] = [
@@ -36,7 +28,7 @@ const LAYERS: LayerSpecification[] = [
     type: 'symbol',
     source: MEASURE_SOURCE,
     filter: ['==', ['geometry-type'], 'LineString'],
-    layout: { ...LABEL_LAYOUT, 'symbol-placement': 'line-center' },
+    layout: { ...labelLayout(['get', 'label']), 'symbol-placement': 'line-center' },
     paint: LABEL_PAINT,
   },
   {
@@ -44,17 +36,16 @@ const LAYERS: LayerSpecification[] = [
     type: 'symbol',
     source: MEASURE_SOURCE,
     filter: ['==', ['geometry-type'], 'Polygon'],
-    layout: LABEL_LAYOUT,
+    layout: labelLayout(['get', 'label']),
     paint: LABEL_PAINT,
   },
 ] as LayerSpecification[];
 
 export const MEASURE_LAYER_IDS = LAYERS.map((l) => l.id);
 
-export function measurementValue(m: Pick<SavedMeasurement, 'kind' | 'coordinates'>, units: ScaleUnit, lang: Lang): string {
-  return m.kind === 'distance'
-    ? formatDistance(lengthMeters(m.coordinates), units, lang)
-    : formatArea(areaSquareMeters(m.coordinates), units, lang);
+/** The stored value (metres or square metres) in the user's display units. */
+export function measurementValue(m: Pick<SavedMeasurement, 'kind' | 'value'>, units: ScaleUnit, lang: Lang): string {
+  return m.kind === 'distance' ? formatDistance(m.value, units, lang) : formatArea(m.value, units, lang);
 }
 
 export function toFeatureCollection(ms: SavedMeasurement[], units: ScaleUnit, lang: Lang): FeatureCollection {
@@ -63,10 +54,7 @@ export function toFeatureCollection(ms: SavedMeasurement[], units: ScaleUnit, la
     .map((m) => ({
       type: 'Feature',
       properties: { mid: m.id, label: `${m.name} · ${measurementValue(m, units, lang)}` },
-      geometry:
-        m.kind === 'distance'
-          ? { type: 'LineString', coordinates: m.coordinates }
-          : { type: 'Polygon', coordinates: [[...m.coordinates, m.coordinates[0]!]] },
+      geometry: m.geometry,
     }));
   return { type: 'FeatureCollection', features };
 }

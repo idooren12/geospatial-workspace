@@ -1,0 +1,74 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  z-index: 60;
+}
+
+.content {
+  position: fixed;
+  inset-block-start: 22vh;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+  padding: 18px 18px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-1);
+  color: var(--text);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
+  z-index: 61;
+}
+
+/* RTL: translateX(-50%) from inset-inline-start would push the box off-screen to the right. */
+:dir(rtl) .content {
+  transform: translateX(50%);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.body {
+  margin: 0;
+  font-size: var(--fs-ui);
+}
+
+.hint {
+  margin: 8px 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-block-start: 16px;
+}
+
+.button {
+  min-width: 80px;
+  min-height: 30px;
+  padding: 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--bg-hover);
+}
+
+.danger {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 28%, var(--bg-2));
+}
+
+.primary {
+  border-color: var(--accent);
+}

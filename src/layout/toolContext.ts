@@ -1,5 +1,5 @@
 import { mapService } from '../map/MapService';
-import { safeStorage } from '../store/persistence';
+import { persistence } from '../persistence';
 import { useWorkspace } from '../store/workspaceStore';
 import type { ToolContext } from '../tools/types';
 
@@ -9,7 +9,6 @@ const cache = new Map<string, ToolContext>();
 export function toolContext(toolId: string): ToolContext {
   let ctx = cache.get(toolId);
   if (ctx) return ctx;
-  const prefix = `gws:tool:${toolId}:`;
   ctx = {
     toolId,
     map: {
@@ -33,24 +32,7 @@ export function toolContext(toolId: string): ToolContext {
       close: () => useWorkspace.getState().closePanel(toolId),
       focus: () => useWorkspace.getState().openPanel(toolId),
     },
-    storage: {
-      get: <T,>(key: string) => {
-        try {
-          const raw = safeStorage('local')?.getItem(prefix + key);
-          return raw == null ? null : (JSON.parse(raw) as T);
-        } catch {
-          return null;
-        }
-      },
-      set: (key, value) => {
-        try {
-          safeStorage('local')?.setItem(prefix + key, JSON.stringify(value));
-        } catch {
-          /* quota / privacy mode */
-        }
-      },
-      remove: (key) => safeStorage('local')?.removeItem(prefix + key),
-    },
+    storage: persistence.toolStorage(toolId),
   };
   cache.set(toolId, ctx);
   return ctx;

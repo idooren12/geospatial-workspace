@@ -2,10 +2,15 @@
   display: grid;
   height: 100%;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) var(--statusbar-h);
   grid-template-areas:
     'top'
-    'main';
+    'main'
+    'status';
+}
+
+.layout[data-map-only='true'] {
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) 0;
 }
 
 .top {
@@ -19,4 +24,9 @@
   position: relative;
   min-width: 0;
   overflow: hidden;
+}
+
+.status {
+  grid-area: status;
+  min-width: 0;
 }

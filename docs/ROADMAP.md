@@ -2,16 +2,21 @@
 
 Order follows the implementation spec.
 
-## M5 — Hardening  ← next
-- [ ] Inspector tool (click a feature → its properties)
-- [ ] Optional: edit existing sketch shapes (terra-draw select mode); measurement label on the map
-- [ ] Optional: sync open tabs via the `storage` event
-- [ ] Accessibility pass (keyboard, aria, focus), performance checks
-- [ ] Full DoD checklist (21 items) at 1366/1920/2560, both languages
-- [ ] Decide satellite provider/key (open decision)
-- [ ] Architecture review gate before Stage 1
+## Gate — architecture review before Stage 1  ← next
+- [ ] Owner + planner review docs/M5_REPORT.md; freeze Stage 0
+- [ ] Decide satellite provider/key for production (docs/ATTRIBUTION.md)
+
+## Later (not in Stage 0)
+- Inspector tool (click a feature → its properties)
+- Edit existing shapes (terra-draw select mode)
+- Sync open tabs (storage event / BroadcastChannel)
+- Visual snapshots in CI (pinned Playwright Docker image)
 
 ## Done
+- [x] M5 — Hardening: DoD audit; status bar; attribution compliance; persistence v2 (adapter,
+      IndexedDB, migration, GeoJSON measurements); undo/redo + confirm dialogs; selection
+      highlight; readable labels; keyboard splitters; a11y (axe) pass; architecture guard
+      extended; visual + responsive + lifecycle tests (docs/M5_REPORT.md)
 - [x] M0 — Scaffold: Vite + React + TS strict, oxlint, architecture guard, Vitest, Playwright, CI
 - [x] M1 — Map Core: MapService, MapView, BasemapManager (Light/Dark), Hebrew/English labels,
       view persistence, Israel first view, language switch
