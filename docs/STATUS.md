@@ -23,7 +23,9 @@ Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-worksp
   badge, own session storage, never the real workspace) with `window.__gws`.
 
 ## Next step
-Owner reviews the Stage 0 result. Stage 1 is not started and has no plan document yet — wait for
+Owner reviews the Stage 0 result. Freeze point: commit `ec4aac9` = tag `v0.1-stage0`. The tag
+could not be pushed from the build environment (tag pushes are blocked there), so the owner
+creates it once on GitHub: Releases → Draft a new release → tag `v0.1-stage0`, target `ec4aac9`. Stage 1 is not started and has no plan document yet — wait for
 the owner. Owner action pending: ArcGIS key for the satellite basemap (docs/ENV.md); until then
 the public Esri endpoint is used.
 
