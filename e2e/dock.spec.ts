@@ -78,7 +78,8 @@ for (const lang of ['he', 'en'] as const) {
     });
 
     test('a rail click on a hidden tab shows it; a second click closes it', async ({ page }) => {
-      await page.setViewportSize({ width: 1000, height: 700 });
+      // 900 px: a second column on the same side would leave the map under 500 px → tabs (overflow).
+      await page.setViewportSize({ width: 900, height: 700 });
       await openerOf(page, 'settings').click();
       await page.getByTestId('rail-btn-debug').click();
       await expect(page.getByRole('tab')).toHaveCount(2);

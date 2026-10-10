@@ -1,0 +1,68 @@
+/* Centred on the map; only the card itself takes pointer events, so the map stays usable. */
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.pill,
+.card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgb(26 29 33 / 0.88);
+  color: var(--text);
+  font-size: var(--fs-small);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.3);
+}
+
+.pill {
+  padding: 5px 12px;
+}
+
+.card {
+  padding-block: 6px;
+  padding-inline: 12px 6px;
+  border-radius: 8px;
+  pointer-events: auto;
+}
+
+.warn {
+  color: #ffb020;
+  flex: none;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 2px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

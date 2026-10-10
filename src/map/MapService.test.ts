@@ -237,3 +237,43 @@ describe('MapService', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('basemap load state (M5.1)', () => {
+  const tile = (sourceId: string) => ({ dataType: 'source', sourceId, tile: {} });
+
+  it('is loading from mount until the style is in and the first basemap tile arrived', () => {
+    const { svc, fake } = setup();
+    const seen: string[] = [];
+    svc.onLoadState((s) => seen.push(s.phase));
+    expect(svc.getLoadState().phase).toBe('loading');
+    fake().fire('data', tile('openmaptiles')); // before the style: does not count as usable
+    fake().fire('style.load');
+    fake().fire('data', tile('ws:a')); // an app layer is not the basemap
+    expect(svc.getLoadState().phase).toBe('loading');
+    fake().fire('data', tile('openmaptiles'));
+    expect(svc.getLoadState().phase).toBe('ready');
+    svc.setStyle('https://example.test/dark'); // every switch loads again
+    expect(svc.getLoadState().phase).toBe('loading');
+    expect(seen).toEqual(['ready', 'loading']);
+  });
+
+  it('reports a failed style, and a basemap whose every tile failed', () => {
+    const a = setup();
+    a.fake().fire('error', { error: new Error('503') });
+    expect(a.svc.getLoadState()).toEqual({ phase: 'error', reason: 'style' });
+
+    const b = setup();
+    b.fake().fire('style.load');
+    b.fake().fire('error', { sourceId: 'imagery' });
+    b.fake().fire('error', { sourceId: 'ws:mine' }); // app layer errors are not basemap errors
+    b.fake().fire('idle');
+    expect(b.svc.getLoadState()).toEqual({ phase: 'error', reason: 'tiles' });
+  });
+
+  it('becomes ready on idle when the style has no tiles to wait for', () => {
+    const { svc, fake } = setup();
+    fake().fire('style.load');
+    fake().fire('idle');
+    expect(svc.getLoadState().phase).toBe('ready');
+  });
+});

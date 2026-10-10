@@ -10,13 +10,15 @@ interface MapViewProps {
    * knows nothing about the store, settings or languages.
    */
   mountOptions: () => Promise<MountOptions>;
+  /** Colour behind the map while tiles load (matches the basemap and theme). */
+  background?: string;
 }
 
 /**
  * Renders the one map container. It sits in a fixed grid cell, so opening, closing or
  * resizing panels never re-renders it; MapService's ResizeObserver handles map.resize().
  */
-export function MapView({ label, mountOptions }: MapViewProps) {
+export function MapView({ label, mountOptions, background }: MapViewProps) {
   const ref = useRef<HTMLDivElement>(null);
   const options = useRef(mountOptions);
 
@@ -28,5 +30,14 @@ export function MapView({ label, mountOptions }: MapViewProps) {
     // No cleanup: the map lives for the whole page (MAP-01).
   }, []);
 
-  return <div ref={ref} className={styles.map} role="region" aria-label={label} />;
+  return (
+    <div
+      ref={ref}
+      className={styles.map}
+      style={background ? { background } : undefined}
+      role="region"
+      aria-label={label}
+      data-testid="map-container"
+    />
+  );
 }

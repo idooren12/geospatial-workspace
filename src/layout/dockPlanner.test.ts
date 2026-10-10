@@ -3,7 +3,6 @@ import {
   activatePanel,
   canSplit,
   closePanel,
-  COMPACT_BELOW,
   dockWidth,
   emptyDock,
   findPanel,
@@ -107,10 +106,30 @@ describe('openPanel', () => {
     expect(s.columns.right[0]!.activePanelId).toBe('a');
   });
 
-  it('keeps one column per side in compact widths', () => {
+  it('on a narrow body, extra panels become tabs because of actual widths (no breakpoint rule)', () => {
     let s = emptyDock();
-    for (const id of ['a', 'b', 'c']) s = open(s, id, 'left', COMPACT_BELOW - 1);
+    for (const id of ['a', 'b', 'c']) s = open(s, id, 'left', 899);
     expect(shape(s)).toEqual({ left: ['a+b+c'], right: [] });
+    expect(mapWidth(s, 899)).toBeGreaterThanOrEqual(MAP_MIN);
+  });
+
+  it('narrows existing columns to keep panels side by side before falling back to tabs (M5.1)', () => {
+    // 1366 body: left 280, right 280; a third panel only fits if the others give some width.
+    const w = MAP_MIN + 3 * (PANEL_MIN + 4) + 60;
+    let s = open(emptyDock(), 'a', 'left', w);
+    s = open(s, 'b', 'right', w);
+    s = open(s, 'c', 'right', w);
+    expect(shape(s)).toEqual({ left: ['a'], right: ['b', 'c'] });
+    expect(mapWidth(s, w)).toBeGreaterThanOrEqual(MAP_MIN);
+    assertInvariants(s, w);
+  });
+
+  it('owner case: Layers + Measurements + Draw at 1366 sit side by side (map ≈ 600 px)', () => {
+    let s = open(emptyDock(), 'layers', 'left');
+    s = open(s, 'measure', 'right');
+    s = open(s, 'draw', 'right');
+    expect(shape(s)).toEqual({ left: ['layers'], right: ['measure', 'draw'] });
+    expect(mapWidth(s, W)).toBeGreaterThanOrEqual(MAP_MIN);
   });
 
   it('never breaks the invariants, whatever the sequence', () => {
@@ -198,6 +217,24 @@ describe('reflow (window resize, restored layout)', () => {
     expect(s.columns.left.length + s.columns.right.length).toBeLessThan(4);
     const all = [...s.columns.left, ...s.columns.right].flatMap((c) => c.panelIds).sort();
     expect(all).toEqual(['a', 'b', 'c', 'd']); // nothing is lost
+  });
+
+  it('splits overflow tabs back into columns when there is room again (stored layouts, wider windows)', () => {
+    // A layout saved on a narrow window: measure + draw as tabs in one 220 px column.
+    const stored: DockState = {
+      mapOnly: false,
+      widthMemory: {},
+      columns: {
+        left: [{ id: 'L', width: 252, panelIds: ['layers'], activePanelId: 'layers' }],
+        right: [{ id: 'R', width: 220, panelIds: ['measure', 'draw'], activePanelId: 'draw' }],
+      },
+    };
+    const s = reflow(stored, W); // map would be ~886 px: plenty of room for another column
+    expect(shape(s)).toEqual({ left: ['layers'], right: ['draw', 'measure'] });
+    expect(s.columns.right[0]!.activePanelId).toBe('draw'); // the visible tab stays where it was
+    expect(mapWidth(s, W)).toBeGreaterThanOrEqual(MAP_MIN);
+    // …and on a window too narrow for two columns it stays as tabs.
+    expect(shape(reflow(stored, 1000)).right).toEqual(['measure+draw']);
   });
 
   it('is a no-op when everything fits', () => {

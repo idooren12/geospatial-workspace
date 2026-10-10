@@ -29,8 +29,6 @@ export const PANEL_DEFAULT = 280;
 export const PANEL_MAX = 450;
 export const MAP_MIN = 500;
 export const SPLITTER = 4;
-/** Below this body width, at most one column per side; extra panels become tabs (spec §13.1). */
-export const COMPACT_BELOW = 900;
 
 export const emptyDock = (): DockState => ({ columns: { left: [], right: [] }, mapOnly: false, widthMemory: {} });
 
@@ -92,20 +90,72 @@ function mergeInnermost(state: DockState, side: DockSide): boolean {
   return true;
 }
 
+/** Total width the existing columns could still give up by shrinking to PANEL_MIN. */
+function shrinkable(state: DockState): number {
+  return SIDES.reduce((sum, side) => sum + state.columns[side].reduce((a, c) => a + Math.max(0, c.width - PANEL_MIN), 0), 0);
+}
+
+/** Takes `amount` px from existing columns (requested side innermost first, then the other side). */
+function shrinkBy(state: DockState, amount: number, first: DockSide, except?: string): void {
+  let left = amount;
+  for (const side of [first, otherSide(first)]) {
+    for (const c of [...state.columns[side]].reverse()) {
+      if (left <= 0) return;
+      if (c.id === except) continue;
+      const take = Math.min(c.width - PANEL_MIN, left);
+      if (take > 0) {
+        c.width -= take;
+        left -= take;
+      }
+    }
+  }
+}
+
 /**
- * Restores the invariants after the body width changed or a layout was loaded:
- * compact mode allows one column per side; otherwise shrink columns toward PANEL_MIN, then merge
- * innermost columns into tab groups (the side with more columns first) until the map fits.
+ * Tab groups exist only as overflow. While there is room for another column (the map staying at
+ * or above MAP_MIN), split tabs back out into their own columns, next to where they were.
+ */
+function unmerge(state: DockState, bodyWidth: number): void {
+  for (;;) {
+    const room = freeSpace(state, bodyWidth) - SPLITTER + shrinkable(state);
+    if (room < PANEL_MIN) return;
+    let done = true;
+    for (const side of SIDES) {
+      const cols = state.columns[side];
+      const i = cols.findIndex((c) => c.panelIds.length > 1);
+      const col = cols[i];
+      if (!col) continue;
+      // Keep the active tab where it is; the most recently added other tab moves out.
+      const moving = [...col.panelIds].reverse().find((p) => p !== col.activePanelId)!;
+      col.panelIds = col.panelIds.filter((p) => p !== moving);
+      const free = freeSpace(state, bodyWidth) - SPLITTER;
+      const wanted = clampWidth(state.widthMemory[moving] ?? PANEL_DEFAULT);
+      const width = Math.max(PANEL_MIN, Math.min(wanted, Math.floor(free)));
+      if (width > free) shrinkBy(state, width - free, side);
+      cols.splice(i + 1, 0, { id: newColumnId(), width, panelIds: [moving], activePanelId: moving });
+      done = false;
+      break;
+    }
+    if (done) return;
+  }
+}
+
+/**
+ * Restores the invariants after the body width changed, a panel closed or a layout was loaded.
+ * Decided by actual widths only (no breakpoints, no panel counts):
+ * - too little room for the map: shrink columns toward PANEL_MIN, then merge innermost columns
+ *   into tab groups (the side with more columns first) until the map fits;
+ * - room to spare: split tab groups back into side-by-side columns while the map keeps MAP_MIN.
  */
 export function reflow(input: DockState, bodyWidth: number): DockState {
   const state = clone(input);
-  if (bodyWidth < COMPACT_BELOW) {
-    for (const side of SIDES) while (mergeInnermost(state, side));
-  }
   for (const side of SIDES) for (const c of state.columns[side]) c.width = clampWidth(c.width);
 
   let deficit = -freeSpace(state, bodyWidth);
-  if (deficit <= 0) return state;
+  if (deficit <= 0) {
+    unmerge(state, bodyWidth);
+    return state;
+  }
 
   // 1. Shrink, innermost columns first.
   for (const side of SIDES) {
@@ -127,9 +177,11 @@ export function reflow(input: DockState, bodyWidth: number): DockState {
 }
 
 /**
- * Opens a panel (spec §4.3). Already open → just activate its tab. Otherwise, in order:
- * a new column at the default width; a narrower new column; a tab in the side's innermost
- * column; finally, make room by shrinking or tab-merging the other side.
+ * Opens a panel (spec §4.3, M5.1). Already open → just activate its tab. Otherwise, by actual
+ * widths: a new column at its remembered/default width if that fits beside the map; else a new
+ * column that fits by narrowing it and, if needed, the other columns (down to PANEL_MIN) — as long
+ * as the map stays at or above MAP_MIN. Only when even that is impossible does it become a tab in
+ * the side's innermost column (overflow). An empty side with no room takes space from the other.
  */
 export function openPanel(input: DockState, panelId: string, side: DockSide, bodyWidth: number): DockState {
   const found = findPanel(input, panelId);
@@ -139,22 +191,13 @@ export function openPanel(input: DockState, panelId: string, side: DockSide, bod
   state.mapOnly = false;
   const cols = state.columns[side];
   const wanted = clampWidth(state.widthMemory[panelId] ?? PANEL_DEFAULT);
-  const compact = bodyWidth < COMPACT_BELOW;
   const free = freeSpace(state, bodyWidth) - SPLITTER;
 
-  const addColumn = (width: number) => {
+  if (free + shrinkable(state) >= PANEL_MIN) {
+    const width = Math.max(PANEL_MIN, Math.min(wanted, Math.floor(free)));
+    if (width > free) shrinkBy(state, width - free, side);
     cols.push({ id: newColumnId(), width, panelIds: [panelId], activePanelId: panelId });
-  };
-
-  if (!(compact && cols.length > 0)) {
-    if (free >= wanted) {
-      addColumn(wanted);
-      return state;
-    }
-    if (free >= PANEL_MIN) {
-      addColumn(Math.floor(free));
-      return state;
-    }
+    return state;
   }
   const inner = cols[cols.length - 1];
   if (inner) {
@@ -163,7 +206,7 @@ export function openPanel(input: DockState, panelId: string, side: DockSide, bod
     return state;
   }
   // The side is empty and there is no room: take it from the other side.
-  addColumn(PANEL_MIN);
+  cols.push({ id: newColumnId(), width: PANEL_MIN, panelIds: [panelId], activePanelId: panelId });
   return reflow(state, bodyWidth);
 }
 
@@ -234,9 +277,11 @@ export function movePanelToOtherSide(state: DockState, panelId: string, bodyWidt
 export function splitPanelToColumn(input: DockState, panelId: string, bodyWidth: number): DockState {
   const found = findPanel(input, panelId);
   if (!found || found.column.panelIds.length < 2) return input;
-  if (bodyWidth < COMPACT_BELOW || freeSpace(input, bodyWidth) - SPLITTER < PANEL_MIN) return input;
+  if (!canSplit(input, panelId, bodyWidth)) return input;
   const state = closePanel(input, panelId);
-  const width = Math.min(clampWidth(state.widthMemory[panelId] ?? PANEL_DEFAULT), Math.floor(freeSpace(state, bodyWidth) - SPLITTER));
+  const free = freeSpace(state, bodyWidth) - SPLITTER;
+  const width = Math.max(PANEL_MIN, Math.min(clampWidth(state.widthMemory[panelId] ?? PANEL_DEFAULT), Math.floor(free)));
+  if (width > free) shrinkBy(state, width - free, found.side);
   const cols = state.columns[found.side];
   // Place it right inside of the column it came from.
   const at = cols.findIndex((c) => c.id === found.column.id);
@@ -249,8 +294,7 @@ export function canSplit(state: DockState, panelId: string, bodyWidth: number): 
   return (
     !!found &&
     found.column.panelIds.length > 1 &&
-    bodyWidth >= COMPACT_BELOW &&
-    freeSpace(state, bodyWidth) - SPLITTER >= PANEL_MIN
+    freeSpace(state, bodyWidth) - SPLITTER + shrinkable(state) >= PANEL_MIN
   );
 }
 

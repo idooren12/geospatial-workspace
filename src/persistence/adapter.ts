@@ -1,7 +1,7 @@
 import type { GeometryDoc, InitialState, Prefs, StoredLayers } from './schema';
 
 /** Where the user's geometry is actually kept in this browser. Shown in Settings. */
-export type GeometryBackend = 'indexeddb' | 'localStorage' | 'memory';
+export type GeometryBackend = 'indexeddb' | 'localStorage' | 'memory' | 'debug';
 
 /**
  * The only door to storage. Components and the store never touch localStorage, sessionStorage or

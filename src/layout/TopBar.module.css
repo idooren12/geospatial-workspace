@@ -37,6 +37,20 @@
   text-overflow: ellipsis;
 }
 
+/* ?debug sessions: impossible to miss, so nobody mistakes the sandbox for their real workspace. */
+.debug {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid #ffb020;
+  border-radius: 999px;
+  background: rgb(255 176 32 / 0.16);
+  color: #ffcf70;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .actions {
   display: flex;
   align-items: center;

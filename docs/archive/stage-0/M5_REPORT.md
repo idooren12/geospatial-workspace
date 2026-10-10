@@ -1,12 +1,14 @@
-# M5 completion report — Stage 0 hardening and architecture freeze
+# Stage 0 final report — M5 hardening + M5.1 freeze
+
+> Archived at tag `v0.1-stage0`. M5.1 changes are in §10; the DoD table reflects the final state.
 
 Date: 2026-10-09 · Scope: the owner's live-site findings plus the planner's 29 review points.
 No Stage 1 work is in this change set.
 
 ## 1. Summary
 
-Every Stage 0 DoD item is now PASS with an automated test, except DoD 3, which works but has no
-production rails yet (see the table). The four live-site findings are fixed:
+Every Stage 0 DoD item is PASS with an automated test. DoD 3 is capability-PASS: rails work for
+any registered tool, but production has no rail tools by owner decision. The four live-site findings are fixed:
 
 1. Attribution was cut off under the floating chip. The chip is gone; the attribution is never
    compact and never covered, and it wraps on a narrow map.
@@ -28,9 +30,9 @@ both languages unless noted; `*.test.ts` are unit tests.
 |---|---|---|---|---|
 | 1 | Map with OpenFreeMap loads | PASS | PASS | workspace.spec "MapLibre worker loads"; live check |
 | 2 | Pan / zoom | PARTIAL (zoom only implied) | PASS | dod.spec "DoD 2: wheel zooms, dragging pans" |
-| 3 | Compact rails (44–52 px) | PARTIAL | PARTIAL | dod.spec "DoD 3"; extensibility.test.tsx. Rails render for any registered tool and measure 48 px. Production has none yet, because the owner moved the built-ins to map controls and the top bar. Stage 1 tools fill them. |
+| 3 | Compact rails (44–52 px) | PARTIAL | **capability-PASS** (M5.1) | dod.spec "DoD 3" (dev tools); extensibility.test.tsx (a test-only registered tool gets a rail and a panel). Rails render for any registered tool and measure 48 px. Production has none by owner decision; Stage 1 tools fill them. |
 | 4 | Panels on both sides | PASS | PASS | dock.spec DCK-02..04; responsive.spec |
-| 5 | Several panels on one side | PASS | PASS | dock.spec; visual "multi-panels-1920" |
+| 5 | Several panels on one side | PASS | PASS (M5.1: side by side whenever the map keeps ≥ 500 px) | dock.spec; dock-allocation.spec (map ≈ 920 px case, owner's 1366 case); dockPlanner.test |
 | 6 | No overlap between panels | PASS | PASS | dock.spec (rectangle intersection = 0) |
 | 7 | Panel never over the map | PASS | PASS | dock.spec; responsive.spec |
 | 8 | Map container resizes | PASS | PASS | dock.spec (map width = body − docks) |
@@ -206,3 +208,22 @@ timeout rose to 60 s, because long draw/reload flows at 2560 px on software WebG
    the owner's data. Removing it is a one-line change if preferred.
 5. **DoD 3 (rails).** I did not add placeholder rail buttons just to satisfy the check in
    production; the owner chose to keep built-ins off the map edges.
+
+## 10. M5.1 addendum (2026-10-10)
+
+Owner findings after M5: (a) a few seconds of black map after a refresh; (b) Measurements and
+Draw opened as tabs on one side even with a ~920 px map. The planner's nine points:
+
+| # | Point | Done |
+|---|---|---|
+| 1 | Dock: side by side whenever the map stays ≥ 500 px; tabs only as overflow; by actual widths | `dockPlanner`: no 900 px breakpoint; other columns narrow (to 220 px) before anything becomes a tab; closing a panel or widening the window splits tabs back; stored tab layouts split on load. dockPlanner.test plus dock-allocation.spec (map ≈ 920 px, the owner's 1366 window, narrow → tabs → wide → columns). |
+| 2 | Non-blocking loading state | Theme-matched placeholder colour behind the map at once. "Loading map…" after 200 ms until the first basemap tile is in. Error with Retry when the style fails or every basemap tile fails. Centred; never over the attribution or controls; map stays usable. MapService.test (states), MapLoading.test (delay, no flicker, Retry), map-loading.spec (slow style, 503 → Retry → recovered). |
+| 3 | Fixed status bar stays; no chip | Unchanged. |
+| 4 | Rails empty in production; test-only tool proves them | extensibility.test.tsx; DoD 3 = capability-PASS. |
+| 5 | Visual regression: plan, not gate | docs/TESTING.md (pinned Docker image, baselines only there). |
+| 6 | `?debug` fully isolated | `DebugSessionAdapter`: defaults, sessionStorage `gws-debug:*` only, never the real localStorage or IndexedDB; "DEBUG MODE" badge; Settings says so. debugAdapter.test and debug-mode.spec (real workspace unchanged before and after). Re-review before any auth or backend: DECISIONS 2026-10-10. |
+| 7 | Esri via ArcGIS Location Platform key | `VITE_ARCGIS_API_KEY` → `ibasemaps-api.arcgis.com/.../World_Imagery?token=…`; public endpoint without it. Basemaps privilege only, referrer-restricted, attribution unchanged, free tier 2M tiles/month. Owner steps in docs/ENV.md. |
+| 8 | Freeze | Tag `v0.1-stage0`; this report archived; contracts in docs/INTERFACES.md; "no opportunistic Core refactors" rule in CLAUDE.md. |
+| 9 | No Stage 1 | Nothing started; no Stage 1 planning document. |
+
+Final test totals: 107 unit/component tests (15 files); E2E 252 runs — 223 passed, 29 skipped by design, 0 failed (3 window sizes × he/en); 7 visual snapshots pass locally. Per-test budget: 60 s (120 s at 2560 px), assertion timeout 10 s.

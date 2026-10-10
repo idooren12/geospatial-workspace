@@ -23,6 +23,7 @@ npm run dev          # http://localhost:5173
 npm run check        # lint + architecture guard + unit tests + build (what CI runs)
 npm run test:e2e     # Playwright at 1366/1920/2560; set PW_CHROMIUM=<path> in sandboxes
 npm run test:visual  # screenshot baselines (local only; -- --update-snapshots to refresh)
+# Optional env: VITE_ARCGIS_API_KEY (Esri satellite via ArcGIS Location Platform) — see docs/ENV.md
 ```
 
 ## Where it runs
@@ -31,7 +32,15 @@ npm run test:visual  # screenshot baselines (local only; -- --update-snapshots t
 | --- | --- | --- |
 | Code | GitHub | https://github.com/idooren12/geospatial-workspace |
 | App | Vercel (static, auto-deploy from `main`) | https://geospatial-workspace.vercel.app |
-| Debug | any build | append `?debug` → `window.__gws.mapService` / `.map` |
+| Debug | any build | `?debug` → isolated sandbox (own session storage, DEBUG MODE badge) + `window.__gws` |
+
+## Stage 0 is frozen (tag `v0.1-stage0`)
+
+The contracts in `docs/INTERFACES.md` (ToolDefinition/ToolContext, WorkspaceLayer/LayerManager,
+MapService, PersistenceAdapter + schema v2, history) change only through a decision entry in
+`docs/DECISIONS.md`. Additive, backward-compatible changes are fine with an entry; breaking ones
+need owner sign-off. No opportunistic Core refactors while building Stage 1 tools. Stage 1 has
+not started: wait for the owner.
 
 ## Hard rules (enforced by `scripts/check-boundaries.mjs`)
 
@@ -52,4 +61,5 @@ npm run test:visual  # screenshot baselines (local only; -- --update-snapshots t
 - `docs/STATUS.md` — where things stand and the exact next step. Read first.
 - `docs/DECISIONS.md` — decision log. `docs/ROADMAP.md` — milestones M0–M5.
 - `docs/SESSIONS.md` — session log. `docs/ENV.md` — environment variables (none yet).
-- `docs/ATTRIBUTION.md` — basemap licences and credits. `docs/M5_REPORT.md` — Stage 0 hardening report.
+- `docs/ATTRIBUTION.md` — basemap licences and credits. `docs/TESTING.md` — test layers, visual plan.
+- `docs/INTERFACES.md` — frozen Stage 0 contracts. `docs/archive/stage-0/M5_REPORT.md` — final DoD report.

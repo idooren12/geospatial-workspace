@@ -38,6 +38,11 @@ export const BasemapManager = {
     return def.kind === 'vector';
   },
 
+  /** Background colour to show while this basemap loads. */
+  placeholderFor(id: string, theme: MapTheme): string {
+    return BasemapManager.resolve(id).placeholder[theme];
+  },
+
   /** Label paint overrides to apply on top of the style, if the basemap defines any. */
   labelPaintFor(id: string, theme: MapTheme): LabelPaint | null {
     const def = BasemapManager.resolve(id);

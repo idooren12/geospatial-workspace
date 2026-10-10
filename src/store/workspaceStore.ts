@@ -127,7 +127,8 @@ export function createWorkspaceStore(initial: InitialState = defaultInitialState
       },
       togglePanel: (id) => set((s) => ({ dock: dock.togglePanel(s.dock, id, sideOf(id), s.bodyWidth) })),
       openPanel: (id, side) => set((s) => ({ dock: dock.openPanel(s.dock, id, side ?? sideOf(id), s.bodyWidth) })),
-      closePanel: (id) => set((s) => ({ dock: dock.closePanel(s.dock, id) })),
+      // Closing frees width: tab groups may split back into side-by-side columns.
+      closePanel: (id) => set((s) => ({ dock: dock.reflow(dock.closePanel(s.dock, id), s.bodyWidth) })),
       activatePanel: (id) => set((s) => ({ dock: dock.activatePanel(s.dock, id) })),
       resizeColumn: (colId, width) => set((s) => ({ dock: dock.resizeColumn(s.dock, colId, width, s.bodyWidth) })),
       movePanelToOtherSide: (id) => set((s) => ({ dock: dock.movePanelToOtherSide(s.dock, id, s.bodyWidth) })),

@@ -98,7 +98,8 @@
     "storage": "Storage",
     "storage_indexeddb": "Drawing layers and saved measurements are saved automatically in this browser only (IndexedDB). Nothing is synced to the cloud or other devices.",
     "storage_localStorage": "Drawing layers and saved measurements are saved automatically in this browser only (localStorage). Nothing is synced to the cloud or other devices.",
-    "storage_memory": "This browser blocks storage: changes will be lost when the page closes."
+    "storage_memory": "This browser blocks storage: changes will be lost when the page closes.",
+    "storage_debug": "DEBUG MODE: everything is kept in this tab only and discarded when it closes. Your saved workspace is not read or changed."
   },
   "debug": {
     "mapInstances": "Map instances",
@@ -191,5 +192,15 @@
     "resetTitle": "Reset the workspace?",
     "resetBody": "All panels, settings, drawing layers and saved measurements will be removed from this browser. This cannot be undone.",
     "reset": "Reset"
+  },
+  "debugMode": {
+    "badge": "DEBUG MODE",
+    "hint": "Isolated test session: starts empty, never reads or writes your saved workspace, and is discarded when the tab closes."
+  },
+  "mapLoad": {
+    "loading": "Loading map…",
+    "styleError": "The basemap could not be loaded.",
+    "tilesError": "Map tiles could not be loaded.",
+    "retry": "Retry"
   }
 }

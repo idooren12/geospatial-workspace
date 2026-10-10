@@ -4,6 +4,7 @@ import { applyDocumentLanguage, dirOf } from '../i18n';
 import i18n from '../i18n';
 import { MapControls } from '../layout/overlay/MapControls';
 import { StatusBar } from '../layout/StatusBar';
+import { MapLoading } from '../layout/MapLoading';
 import { UndoToast } from '../layout/UndoToast';
 import { DockArea } from '../layout/DockArea';
 import { TopBar } from '../layout/TopBar';
@@ -107,14 +108,6 @@ function useWorkspaceWiring() {
 
   // Store → map / document. Subscriptions fire on change only, never on mount.
   useEffect(() => {
-    let request = 0;
-    const applyBasemap = () => {
-      const { basemapId, mapTheme } = useWorkspace.getState();
-      const mine = ++request;
-      void BasemapManager.styleFor(basemapId, mapTheme).then((style) => {
-        if (mine === request) mapService.setStyle(style, BasemapManager.labelPaintFor(basemapId, mapTheme)); // ignore stale, slower requests
-      });
-    };
     const offs = [
       useWorkspace.subscribe((s) => s.basemapId, applyBasemap),
       useWorkspace.subscribe((s) => s.mapTheme, applyBasemap),
@@ -134,6 +127,20 @@ function useWorkspaceWiring() {
     ];
     return () => offs.forEach((off) => off());
   }, []);
+}
+
+let basemapRequest = 0;
+
+/**
+ * Builds the chosen basemap's style and applies it. Also the map's Retry after a failure (imagery
+ * styles are rebuilt, so a failed label fetch gets another chance). Slower, stale requests lose.
+ */
+function applyBasemap(): void {
+  const { basemapId, mapTheme } = useWorkspace.getState();
+  const mine = ++basemapRequest;
+  void BasemapManager.styleFor(basemapId, mapTheme).then((style) => {
+    if (mine === basemapRequest) mapService.setStyle(style, BasemapManager.labelPaintFor(basemapId, mapTheme));
+  });
 }
 
 /** With `?debug`, add `window.__gws.layers` so layer flows can be checked on any build. */
@@ -202,10 +209,27 @@ export function Workspace() {
   // Stored layouts may name tools that no longer exist.
   useEffect(() => useWorkspace.getState().pruneDock(toolRegistry.ids()), []);
   const mapOnly = useWorkspace((s) => s.dock.mapOnly);
+  // Theme-matched backdrop while the basemap loads (no black flash on a light map).
+  const placeholder = useWorkspace((s) => BasemapManager.placeholderFor(s.basemapId, s.mapTheme));
   const { t } = useTranslation();
   return (
     <>
-      <WorkspaceLayout topBar={<TopBar />} body={<DockArea map={<MapView label={t('map.label')} mountOptions={mapMountOptions} />} mapOverlay={<UndoToast />} />} statusBar={<StatusBar />} mapOnly={mapOnly} />
+      <WorkspaceLayout
+        topBar={<TopBar />}
+        body={
+          <DockArea
+            map={<MapView label={t('map.label')} mountOptions={mapMountOptions} background={placeholder} />}
+            mapOverlay={
+              <>
+                <MapLoading onRetry={applyBasemap} />
+                <UndoToast />
+              </>
+            }
+          />
+        }
+        statusBar={<StatusBar />}
+        mapOnly={mapOnly}
+      />
       <MapControls />
     </>
   );

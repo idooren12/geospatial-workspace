@@ -54,8 +54,11 @@ test('fixed top bar and status bar; the map fills everything between them, edge 
 
 test('status bar shows cursor coordinates, zoom and basemap (DoD 16)', async ({ page }) => {
   const map = await box(page, 'main');
-  await page.mouse.move(map.x + map.width / 2, map.y + map.height / 2);
-  await expect(page.getByTestId('cursor-coords')).toHaveText(/^\d+\.\d{5} [NS], \d+\.\d{5} [EW]$/);
+  // Keep moving until the map reports the cursor (its handlers attach once the style is in).
+  await expect(async () => {
+    await page.mouse.move(map.x + map.width / 2 + Math.random() * 20, map.y + map.height / 2, { steps: 3 });
+    await expect(page.getByTestId('cursor-coords')).toHaveText(/^\d+\.\d{5} [NS], \d+\.\d{5} [EW]$/, { timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
   await expect(page.getByTestId('zoom-level')).toHaveText(/^\d+\.\d$/);
   await expect(page.getByTestId('status-basemap')).toHaveText('מפה · בהיר');
   // Leaving the map keeps the last position (dimmed) so it can be copied.

@@ -31,7 +31,7 @@ const report = (file, line, msg) => errors.push(`${file}:${line}  ${msg}`);
 
 const CORE = /^src\/(map|layout|layers|panels|store|app|utilities|ui|styles|i18n|persistence|history)\/|^src\/tools\/(ToolRegistry|types|index)\.ts$/;
 const DOMAIN = /\b(weather|grib|fresnel|linkBudget|link-budget|calculateRF|droneZone|lineOfSight)\b/i;
-const PROVIDER = /openfreemap\.org|tile\.openstreetmap\.org|api\.mapbox\.com|maptiler\.com|arcgisonline\.com/;
+const PROVIDER = /openfreemap\.org|tile\.openstreetmap\.org|api\.mapbox\.com|maptiler\.com|arcgisonline\.com|arcgis\.com\/arcgis/;
 const STORAGE = /\b(localStorage|sessionStorage|indexedDB)\b/;
 /** Directory a relative import resolves into, e.g. "../store/x" from src/map/y.ts → "src/store". */
 function importTarget(rel, spec) {

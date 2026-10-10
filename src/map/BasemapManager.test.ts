@@ -34,6 +34,7 @@ const sat: RasterBasemap = {
   imagery: { tiles: ['https://img.test/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: '© Imagery' },
   labelsStyleUrl: 'https://example.test/style',
   licence: { providers: ['Test'], terms: ['test'], requiredCredit: ['© Imagery'] },
+  placeholder: { light: '#000', dark: '#000' },
 };
 
 describe('buildImageryStyle', () => {
@@ -95,5 +96,15 @@ describe('basemap licensing (M5 attribution audit)', () => {
       const credits = Object.values(style.sources).map((s) => s.attribution ?? '').join(' ');
       for (const c of b.licence.requiredCredit) expect(credits.replace(/<[^>]+>/g, ''), b.id).toContain(c);
     }
+  });
+});
+
+describe('Esri imagery key (M5.1)', () => {
+  it('uses the keyed ArcGIS Location Platform endpoint only when a key is given', async () => {
+    const { esriImageryTiles } = await import('./basemaps.config');
+    expect(esriImageryTiles(undefined)[0]).toMatch(/^https:\/\/server\.arcgisonline\.com\/.*\{z\}\/\{y\}\/\{x\}$/);
+    expect(esriImageryTiles('   ')[0]).toMatch(/server\.arcgisonline\.com/);
+    const keyed = esriImageryTiles('AAPK a/b');
+    expect(keyed[0]).toBe('https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=AAPK%20a%2Fb');
   });
 });

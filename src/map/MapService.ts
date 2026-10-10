@@ -26,6 +26,16 @@ setWorkerUrl(workerUrl);
 export type MapFactory = (options: MapOptions) => MlMap;
 
 /**
+ * Whether the basemap is usable. `loading` from mount / every style switch until usable content is
+ * on screen (the style is loaded and the first basemap tile has arrived, or the map went idle);
+ * `error` when the style itself failed, or every requested basemap tile failed; `ready` otherwise.
+ */
+export type MapLoadState =
+  | { phase: 'loading'; since: number }
+  | { phase: 'ready' }
+  | { phase: 'error'; reason: 'style' | 'tiles' };
+
+/**
  * Named places on the map where the app can render its own floating UI (via React portals).
  * `tools` sits under the navigation control. The bottom of the map belongs to the scale and the
  * attribution, which nothing else may cover (the status bar is outside the map).
@@ -70,6 +80,9 @@ export class MapService {
   private overlays = new Set<string>();
   private readonly subscriptions = new Set<Subscription>();
   private readonly styleLoadCallbacks = new Set<() => void>();
+  private readonly loadStateListeners = new Set<(s: MapLoadState) => void>();
+  private loadState: MapLoadState = { phase: 'loading', since: Date.now() };
+  private tileStats = { ok: 0, failed: 0 };
   private labelLanguage: LabelLanguage = 'he';
   private labelPaint: LabelPaint | null = null;
   private controlCorner: ControlCorner = 'top-right';
@@ -119,6 +132,10 @@ export class MapService {
     });
     this.map = map;
     this.instanceCount += 1;
+    this.beginLoading();
+    map.on('idle', this.handleIdle);
+    map.on('error', this.handleError as never);
+    map.on('data', this.handleData as never);
 
     this.nav = new NavigationControl({ visualizePitch: true });
     this.scale = new ScaleControl({ unit: opts.scaleUnit, maxWidth: 120 });
@@ -203,6 +220,48 @@ export class MapService {
     return () => this.styleLoadCallbacks.delete(fn);
   }
 
+  // ------------------------------------------------------------ load state
+
+  getLoadState(): MapLoadState {
+    return this.loadState;
+  }
+
+  /** Loading / ready / error changes of the basemap (for the loading indicator). */
+  onLoadState(fn: (s: MapLoadState) => void): () => void {
+    this.loadStateListeners.add(fn);
+    return () => this.loadStateListeners.delete(fn);
+  }
+
+  private setLoadState(s: MapLoadState): void {
+    this.loadState = s;
+    for (const fn of this.loadStateListeners) fn(s);
+  }
+
+  private beginLoading(): void {
+    this.tileStats = { ok: 0, failed: 0 };
+    this.setLoadState({ phase: 'loading', since: Date.now() });
+  }
+
+  private readonly handleIdle = (): void => {
+    if (this.loadState.phase !== 'loading' || !this.styleReady) return;
+    // Every basemap tile that was requested failed: the map is empty, say so.
+    const allFailed = this.tileStats.failed > 0 && this.tileStats.ok === 0;
+    this.setLoadState(allFailed ? { phase: 'error', reason: 'tiles' } : { phase: 'ready' });
+  };
+
+  private readonly handleError = (e: { sourceId?: string }): void => {
+    if (e.sourceId?.startsWith(WS_PREFIX)) return; // an app layer's problem, not the basemap's
+    if (e.sourceId) this.tileStats.failed++;
+    else if (!this.styleReady) this.setLoadState({ phase: 'error', reason: 'style' });
+  };
+
+  private readonly handleData = (e: { dataType?: string; sourceId?: string; tile?: unknown }): void => {
+    if (e.dataType !== 'source' || !e.tile || e.sourceId?.startsWith(WS_PREFIX)) return;
+    this.tileStats.ok++;
+    // First basemap content is in: usable now, even if more tiles are still coming.
+    if (this.loadState.phase === 'loading' && this.styleReady) this.setLoadState({ phase: 'ready' });
+  };
+
   private readonly handleStyleLoad = (): void => {
     this.styleReady = true;
     this.applyLabelLanguage();
@@ -217,6 +276,7 @@ export class MapService {
     if (!this.map) return;
     this.labelPaint = labelPaint;
     this.styleReady = false;
+    this.beginLoading();
     this.map.setStyle(style, { diff: false });
   }
 

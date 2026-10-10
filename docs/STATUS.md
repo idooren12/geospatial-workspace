@@ -1,13 +1,15 @@
-# Status — 2026-10-09
+# Status — 2026-10-10
 
 Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-workspace`, deploys on push to `main`).
 
-## Works now (M0–M5 — Stage 0 complete, awaiting the review gate)
+## Works now (Stage 0 complete and frozen — tag `v0.1-stage0`)
 - One MapLibre instance; Map (light/dark) and Satellite basemaps; Hebrew RTL default, English.
 - Fixed top bar (undo/redo, Map Only, Settings, language) and a 24 px status bar (coordinates —
   click to copy —, zoom, basemap); the map fills everything between them. Map controls: zoom,
   layers, measurements, draw, light/dark. Attribution is never compact or covered.
-- Dock: columns beside the map, tabs, splitters (drag + full keyboard), Map Only, persisted, reflow.
+- Dock: columns beside the map; same-side panels sit side by side whenever the map keeps ≥ 500 px
+  (tabs only as overflow); splitters (drag + full keyboard), Map Only, persisted, reflow.
+- Map loading: theme-matched backdrop, "Loading map…" after 200 ms, error + Retry on failures.
 - Layers: generic WorkspaceLayer + LayerManager; Layers panel (basemap + layers: show/hide,
   opacity, rename, reorder, delete with confirm). Tools add details via `ToolDefinition.layerDetails`.
 - Measurements (own panel, saved named list) and drawing layers (named shapes grouped in layers),
@@ -17,14 +19,16 @@ Live: https://geospatial-workspace.vercel.app (Vercel project `geospatial-worksp
   Undo toast, layer deletes and reset ask first.
 - Persistence v2: prefs in localStorage, drawing layers + saved measurements in IndexedDB,
   auto-saved, migrated from v1, corrupt data handled. This browser only.
-- Tests: see docs/M5_REPORT.md §7. `?debug` exposes `window.__gws` on any build.
+- Tests: see docs/archive/stage-0/M5_REPORT.md. `?debug` opens an isolated sandbox (DEBUG MODE
+  badge, own session storage, never the real workspace) with `window.__gws`.
 
 ## Next step
-Architecture review gate: owner + planner read docs/M5_REPORT.md and docs/ATTRIBUTION.md, decide
-the satellite licence for production, then freeze Stage 0. Stage 1 starts only after that.
+Owner reviews the Stage 0 result. Stage 1 is not started and has no plan document yet — wait for
+the owner. Owner action pending: ArcGIS key for the satellite basemap (docs/ENV.md); until then
+the public Esri endpoint is used.
 
 ## Known issues
-- Satellite provider terms for production are an open decision (docs/ATTRIBUTION.md).
+- Satellite runs on Esri's public endpoint until the owner sets `VITE_ARCGIS_API_KEY` (docs/ENV.md).
 - Visual snapshots run locally only (`npm run test:visual`), not in CI.
 - The cloud sandbox cannot reach tiles.openfreemap.org / arcgisonline. E2E tests serve local
   stand-ins (`e2e/fixtures.ts`: styles, Noto glyphs, imagery), so maps, labels and attribution do

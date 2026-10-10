@@ -1,6 +1,7 @@
 import { Languages, Maximize2, Minimize2, Redo2, Settings, Undo2 } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { history } from '../history/history';
+import { DEBUG_MODE } from '../persistence';
 import { isActive } from './dockPlanner';
 import { useTranslation } from 'react-i18next';
 import { useWorkspace } from '../store/workspaceStore';
@@ -31,6 +32,11 @@ export function TopBar() {
         <span className={styles.workspace} title={t('app.workspace')}>
           {t('app.untitled')}
         </span>
+        {DEBUG_MODE && (
+          <span className={styles.debug} role="status" title={t('debugMode.hint')} data-testid="debug-badge">
+            {t('debugMode.badge')}
+          </span>
+        )}
       </div>
       <div className={styles.actions}>
         <IconButton

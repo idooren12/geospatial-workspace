@@ -52,6 +52,8 @@ interface BasemapBase {
    * style's sources; this says who provides it, under which terms, and what the credit must say.
    */
   licence: BasemapLicence;
+  /** Shown behind the map while it loads, so a refresh does not flash black on a light map. */
+  placeholder: Record<MapTheme, string>;
 }
 
 export interface BasemapLicence {

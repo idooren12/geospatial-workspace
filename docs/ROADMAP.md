@@ -2,9 +2,10 @@
 
 Order follows the implementation spec.
 
-## Gate — architecture review before Stage 1  ← next
-- [ ] Owner + planner review docs/M5_REPORT.md; freeze Stage 0
-- [ ] Decide satellite provider/key for production (docs/ATTRIBUTION.md)
+## Stage 1  ← next, after the owner reviews Stage 0 (not started; no plan written yet)
+
+## Owner actions
+- [ ] Create the ArcGIS Location Platform key and set `VITE_ARCGIS_API_KEY` in Vercel (docs/ENV.md)
 
 ## Later (not in Stage 0)
 - Inspector tool (click a feature → its properties)
@@ -13,10 +14,12 @@ Order follows the implementation spec.
 - Visual snapshots in CI (pinned Playwright Docker image)
 
 ## Done
+- [x] M5.1 — Dock side-by-side by actual widths; map loading/error state; isolated `?debug`;
+      Esri key path; freeze docs; tag `v0.1-stage0`
 - [x] M5 — Hardening: DoD audit; status bar; attribution compliance; persistence v2 (adapter,
       IndexedDB, migration, GeoJSON measurements); undo/redo + confirm dialogs; selection
       highlight; readable labels; keyboard splitters; a11y (axe) pass; architecture guard
-      extended; visual + responsive + lifecycle tests (docs/M5_REPORT.md)
+      extended; visual + responsive + lifecycle tests (docs/archive/stage-0/M5_REPORT.md)
 - [x] M0 — Scaffold: Vite + React + TS strict, oxlint, architecture guard, Vitest, Playwright, CI
 - [x] M1 — Map Core: MapService, MapView, BasemapManager (Light/Dark), Hebrew/English labels,
       view persistence, Israel first view, language switch

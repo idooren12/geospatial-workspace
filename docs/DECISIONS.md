@@ -189,3 +189,46 @@ system never interprets (drawing layers keep their colour there). No domain fiel
 **Kept deliberately.** The `?debug` URL flag still exposes `window.__gws` on production builds:
 it has no UI, grants nothing a user cannot already do with devtools, and is how the live site is
 verified without touching the owner's data.
+
+## 2026-10-10 — M5.1 (owner + planner, closes Stage 0)
+
+**Dock allocation by actual widths (supersedes spec §4.4/§13.1 "below 900 px one column per
+side").** A panel opens as its own column whenever the map keeps ≥ 500 px. Narrowing other
+columns (down to 220 px) counts. Tabs are only the overflow fallback. Closing a panel or widening
+the window splits overflow tabs back into columns, and a layout stored as tabs is split again on
+load. There are no breakpoints and no panel counts. Owner case: Layers + Measurements + Draw at
+1366 sit side by side (map ≈ 590 px).
+
+**Map loading state.** The map container shows the basemap's placeholder colour at once (light
+map: near-white; no black flash). After ~200 ms, if the basemap is still not usable, a small
+centred "Loading map…" status appears. It never covers the attribution or the controls, and the
+map stays interactive. "Usable" means the style has loaded and the first basemap tile has
+arrived, or the map is idle. A failed style, or a basemap whose every tile failed, shows an error
+with Retry; Retry rebuilds and re-applies the style.
+
+**Status bar.** The fixed 24 px bar stays the default. There is no floating chip. A compact
+variant may be considered later, only for Map Only.
+
+**Rails.** Production stays empty. Capability is proven by test-registered tools
+(`extensibility.test.tsx`; dev Debug/Sample in E2E). DoD 3 = capability-PASS.
+
+**`?debug` = isolated sandbox.** `DebugSessionAdapter` starts from defaults and keeps everything
+in this tab's sessionStorage under `gws-debug:`. It never reads or writes the user's localStorage
+keys or IndexedDB, and a "DEBUG MODE" badge shows in the top bar. `window.__gws` only operates on
+that sandbox, and there are no secrets. **Re-review before any auth or backend exists:** once a
+session carries credentials or server data, the console hook must be removed or gated on the
+server.
+
+**Esri satellite.** Optional build-time `VITE_ARCGIS_API_KEY` (ArcGIS Location Platform). When it
+is set, tiles come from `ibasemaps-api.arcgis.com/.../World_Imagery` with the key; otherwise the
+public endpoint is used. The key is public by design and limited in the ArcGIS dashboard to the
+Basemaps privilege and the site's referrer. Attribution is unchanged. Free tier: 2M tiles/month.
+Owner steps are in docs/ENV.md. Until the owner adds the key, the public endpoint stays.
+
+**Visual regression.** It stays out of normal CI. The plan for making it a gate (one pinned
+Playwright Docker image, baselines generated only there) is in docs/TESTING.md. DOM/layout E2E
+remains the CI gate.
+
+**Freeze.** Stage 0 is tagged `v0.1-stage0`. Public contracts are in docs/INTERFACES.md, and the
+final DoD/M5 report is archived in docs/archive/stage-0/. During Stage 1, Core contracts change
+only through a decision entry here. No opportunistic Core refactors.

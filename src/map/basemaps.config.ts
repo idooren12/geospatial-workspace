@@ -1,6 +1,23 @@
 import type { BasemapDefinition } from './types';
 
 /**
+ * Esri World Imagery tiles. With an ArcGIS Location Platform API key (Vercel env
+ * `VITE_ARCGIS_API_KEY`, see docs/ENV.md) tiles come from the keyed endpoint, counted against that
+ * account; without one, from the anonymous public endpoint (development/evaluation only).
+ * The key is a *public* client key: it is inlined into the bundle by design and must be limited to
+ * the Basemaps privilege and to the site's referrers in the ArcGIS dashboard.
+ */
+export function esriImageryTiles(apiKey: string | undefined): string[] {
+  const key = apiKey?.trim();
+  return key
+    ? [`https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(key)}`]
+    : ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'];
+}
+
+/** True when the build carries an ArcGIS key (shown nowhere; used by tests and docs). */
+export const ESRI_KEYED = !!import.meta.env.VITE_ARCGIS_API_KEY?.trim();
+
+/**
  * The ONLY place basemap provider URLs may appear.
  * Adding Terrain / Marine later = one more entry here (plus an i18n name).
  */
@@ -14,6 +31,7 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
       light: 'https://tiles.openfreemap.org/styles/positron',
       dark: 'https://tiles.openfreemap.org/styles/dark',
     },
+    placeholder: { light: '#f2f3f0', dark: '#1b1d20' },
     licence: {
       providers: ['OpenFreeMap', 'OpenMapTiles', 'OpenStreetMap contributors'],
       terms: ['OpenFreeMap Terms of Service (free, no key)', 'OpenMapTiles: CC-BY 4.0', 'OpenStreetMap data: ODbL 1.0'],
@@ -29,17 +47,18 @@ export const BASEMAPS: readonly BasemapDefinition[] = [
     nameKey: 'basemap.satellite',
     icon: 'satellite',
     kind: 'raster',
-    // Esri World Imagery, public endpoint, no key. Licensed under the Esri Master License Agreement:
-    // see docs/ATTRIBUTION.md (open decision: production use needs an ArcGIS account/key or another
-    // provider). Esri requires "Powered by Esri" plus the layer's own credits, both shown here.
+    // Esri World Imagery under the Esri Master License Agreement (docs/ATTRIBUTION.md). Keyed through
+    // ArcGIS Location Platform when VITE_ARCGIS_API_KEY is set, else the public endpoint. Esri requires
+    // "Powered by Esri" plus the layer's own credits — shown in both cases.
     imagery: {
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tiles: esriImageryTiles(import.meta.env.VITE_ARCGIS_API_KEY),
       tileSize: 256,
       maxzoom: 19,
       attribution:
         'Powered by <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> | ' +
         'Imagery: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
     },
+    placeholder: { light: '#2b3226', dark: '#2b3226' },
     licence: {
       providers: ['Esri', 'Vantor', 'Earthstar Geographics', 'GIS User Community', 'OpenFreeMap (labels)'],
       terms: ['Esri Master License Agreement', 'labels: as the Map basemap'],
